@@ -7,25 +7,37 @@
   // ============================================================
   const tabBtnConvert = document.getElementById('tabBtnConvert');
   const tabBtnInventory = document.getElementById('tabBtnInventory');
+  const tabBtnLocHW = document.getElementById('tabBtnLocHW');
   const tabConvert = document.getElementById('tabConvert');
   const tabInventory = document.getElementById('tabInventory');
+  const tabLocHW = document.getElementById('tabLocHW');
 
   function switchTab(targetTab) {
+    tabBtnConvert.classList.remove('active');
+    tabBtnInventory.classList.remove('active');
+    if (tabBtnLocHW) tabBtnLocHW.classList.remove('active');
+
+    tabConvert.style.display = 'none';
+    tabInventory.style.display = 'none';
+    if (tabLocHW) tabLocHW.style.display = 'none';
+
     if (targetTab === 'tabConvert') {
       tabBtnConvert.classList.add('active');
-      tabBtnInventory.classList.remove('active');
       tabConvert.style.display = 'block';
-      tabInventory.style.display = 'none';
-    } else {
+    } else if (targetTab === 'tabInventory') {
       tabBtnInventory.classList.add('active');
-      tabBtnConvert.classList.remove('active');
       tabInventory.style.display = 'block';
-      tabConvert.style.display = 'none';
+    } else if (targetTab === 'tabLocHW') {
+      if (tabBtnLocHW) tabBtnLocHW.classList.add('active');
+      if (tabLocHW) tabLocHW.style.display = 'block';
     }
   }
 
   tabBtnConvert.addEventListener('click', () => switchTab('tabConvert'));
   tabBtnInventory.addEventListener('click', () => switchTab('tabInventory'));
+  if (tabBtnLocHW) {
+    tabBtnLocHW.addEventListener('click', () => switchTab('tabLocHW'));
+  }
 
   // ============================================================
   // UTILITIES
@@ -1187,5 +1199,492 @@
       `;
     }
   });
+
+  // ============================================================
+  // TAB 3: HONEYWELL LOCATION CHECKER (XX-YYY-Z)
+  // ============================================================
+  const fileInputLoc = document.getElementById('fileInputLoc');
+  const btnSelectLocFile = document.getElementById('btnSelectLocFile');
+  const btnLoadDemoLoc = document.getElementById('btnLoadDemoLoc');
+  const locFileName = document.getElementById('locFileName');
+
+  const locStatsSection = document.getElementById('locStatsSection');
+  const statLocTotalSKU = document.getElementById('statLocTotalSKU');
+  const statLocTotalQty = document.getElementById('statLocTotalQty');
+  const statLocStdQty = document.getElementById('statLocStdQty');
+  const statLocNonStdQty = document.getElementById('statLocNonStdQty');
+
+  const locSummaryGrid = document.getElementById('locSummaryGrid');
+  const locResultCard = document.getElementById('locResultCard');
+  const locSubtitle = document.getElementById('locSubtitle');
+  const btnDownloadLocReport = document.getElementById('btnDownloadLocReport');
+
+  const locFilterPills = document.getElementById('locFilterPills');
+  const badgeLocNonStd = document.getElementById('badgeLocNonStd');
+  const badgeLocQC = document.getElementById('badgeLocQC');
+  const badgeLocTam = document.getElementById('badgeLocTam');
+  const badgeLocStd = document.getElementById('badgeLocStd');
+  const badgeLocAll = document.getElementById('badgeLocAll');
+
+  const locSearchInput = document.getElementById('locSearchInput');
+  const locRowCount = document.getElementById('locRowCount');
+  const locTableBody = document.getElementById('locTableBody');
+
+  const STD_LOCATION_REGEX = /^[A-Za-z0-9]{2}-[A-Za-z0-9]{3}-[A-Za-z0-9]$/;
+
+  let honeywellLocationData = [];
+  let currentLocFilter = 'non_std';
+  let currentLocSearch = '';
+
+  if (btnSelectLocFile && fileInputLoc) {
+    btnSelectLocFile.addEventListener('click', () => {
+      fileInputLoc.value = '';
+      fileInputLoc.click();
+    });
+
+    fileInputLoc.addEventListener('change', async (e) => {
+      if (e.target.files.length > 0) {
+        const file = e.target.files[0];
+        try {
+          showToast(`Đang đọc file tồn Honeywell: ${file.name}...`, 'info');
+          const buffer = await file.arrayBuffer();
+          await parseAndCheckHoneywellLocation(buffer, file.name);
+          showToast(`Đã kiểm tra xong vị trí tồn kho file ${file.name}!`, 'success');
+        } catch (err) {
+          console.error(err);
+          showToast('Lỗi đọc file: ' + err.message, 'error');
+        }
+      }
+    });
+  }
+
+  if (btnLoadDemoLoc) {
+    btnLoadDemoLoc.addEventListener('click', async () => {
+      try {
+        if (typeof SAMPLE_HW_BASE64 !== 'undefined') {
+          showToast('Đang tải dữ liệu mẫu Tồn Honeywell...', 'info');
+          const buffer = base64ToArrayBuffer(SAMPLE_HW_BASE64);
+          await parseAndCheckHoneywellLocation(buffer, 'Tồn Honeywell.xlsx (Mẫu)');
+          showToast('Đã phân tích xong dữ liệu mẫu Tồn Honeywell!', 'success');
+        } else {
+          showToast('Không tìm thấy dữ liệu mẫu Honeywell.', 'error');
+        }
+      } catch (err) {
+        console.error(err);
+        showToast('Lỗi: ' + err.message, 'error');
+      }
+    });
+  }
+
+  async function parseAndCheckHoneywellLocation(arrayBuffer, fileName) {
+    if (typeof ExcelJS === 'undefined') {
+      throw new Error('Thư viện ExcelJS chưa sẵn sàng.');
+    }
+
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(arrayBuffer);
+
+    if (wb.worksheets.length === 0) {
+      throw new Error('File Excel không có sheet nào.');
+    }
+
+    const ws = wb.worksheets[0];
+
+    // Detect column indexes (fallback to default standard columns: C=3, D=4, F=6, I=9, L=12)
+    let colSKU = 3;
+    let colCode = 4;
+    let colName = 6;
+    let colLoc = 9;
+    let colQty = 12;
+
+    const headerRow = ws.getRow(1);
+    if (headerRow) {
+      headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
+        const txt = String(cell.value || '').trim().toLowerCase();
+        if (txt === 'sku') {
+          colSKU = colNumber;
+        } else if (txt === 'mcode' || txt === 'mã hàng' || txt === 'barcode') {
+          colCode = colNumber;
+        } else if (txt === 'sku name' || txt === 'tên sản phẩm' || txt === 'tên hàng') {
+          colName = colNumber;
+        } else if (txt === 'location id' || txt === 'location' || txt === 'vị trí') {
+          colLoc = colNumber;
+        } else if (txt === 'total quantity' || txt === 'total qty' || txt.includes('total quantity')) {
+          colQty = colNumber;
+        }
+      });
+    }
+
+    honeywellLocationData = [];
+
+    for (let r = 2; r <= ws.rowCount; r++) {
+      const row = ws.getRow(r);
+      const skuVal = String(row.getCell(colSKU).value || '').trim();
+      if (!skuVal) continue;
+
+      const codeVal = String(row.getCell(colCode).value || '').trim();
+      const nameVal = String(row.getCell(colName).value || '').trim();
+      const locVal = String(row.getCell(colLoc).value || '').trim();
+
+      const rawQty = row.getCell(colQty).value;
+      let qty = 0;
+      if (typeof rawQty === 'number') {
+        qty = rawQty;
+      } else if (rawQty != null) {
+        const n = parseFloat(String(rawQty).replace(/,/g, ''));
+        qty = isNaN(n) ? 0 : n;
+      }
+
+      const isStd = STD_LOCATION_REGEX.test(locVal);
+      let statusType = 'std';
+      let statusLabel = 'Chuẩn XX-YYY-Z';
+      let note = 'Vị trí chuẩn kệ kho';
+
+      const locUpper = locVal.toUpperCase();
+
+      if (isStd) {
+        statusType = 'std';
+        statusLabel = 'Chuẩn XX-YYY-Z';
+        note = 'Vị trí chuẩn kệ kho';
+      } else if (qty === 0) {
+        statusType = 'zero_qty';
+        statusLabel = 'Vị trí cũ (Tồn = 0)';
+        note = 'Định dạng cũ/lịch sử nhưng số lượng tồn = 0';
+      } else if (locUpper.includes('QC')) {
+        statusType = 'qc';
+        statusLabel = 'INBOUND_QC (Chưa vào kệ)';
+        note = 'Hàng đang ở khu vực kiểm QC, chưa putaway nhập kệ';
+      } else if (locUpper.includes('TAM')) {
+        statusType = 'tam';
+        statusLabel = 'TAM.PL.6 (Tạm Pallet)';
+        note = 'Hàng đang lưu tại pallet tạm, cần sắp xếp vào vị trí';
+      } else {
+        statusType = 'non_std';
+        statusLabel = `Chưa chuẩn (${locVal || 'Trống'})`;
+        note = 'Vị trí không theo chuẩn XX-YYY-Z, cần kiểm tra';
+      }
+
+      honeywellLocationData.push({
+        sku: skuVal,
+        code: codeVal,
+        name: nameVal,
+        location: locVal,
+        qty: qty,
+        isStandard: isStd,
+        statusType: statusType,
+        statusLabel: statusLabel,
+        note: note
+      });
+    }
+
+    if (locFileName) {
+      locFileName.textContent = `${fileName} (${honeywellLocationData.length} dòng dữ liệu)`;
+    }
+
+    renderLocationAnalysis();
+  }
+
+  function renderLocationAnalysis() {
+    if (honeywellLocationData.length === 0) {
+      if (locStatsSection) locStatsSection.style.display = 'none';
+      if (locSummaryGrid) locSummaryGrid.style.display = 'none';
+      if (locResultCard) locResultCard.style.display = 'none';
+      return;
+    }
+
+    const uniqueSKUCount = new Set(honeywellLocationData.map(r => r.sku)).size;
+    const totalQty = honeywellLocationData.reduce((acc, r) => acc + r.qty, 0);
+
+    const stdItems = honeywellLocationData.filter(r => r.isStandard);
+    const stdQty = stdItems.reduce((acc, r) => acc + r.qty, 0);
+
+    const nonStdActiveItems = honeywellLocationData.filter(r => !r.isStandard && r.qty > 0);
+    const nonStdQty = nonStdActiveItems.reduce((acc, r) => acc + r.qty, 0);
+    const nonStdSKUCount = new Set(nonStdActiveItems.map(r => r.sku)).size;
+
+    const qcItems = honeywellLocationData.filter(r => r.statusType === 'qc');
+    const qcQty = qcItems.reduce((acc, r) => acc + r.qty, 0);
+    const qcSKUCount = new Set(qcItems.map(r => r.sku)).size;
+
+    const tamItems = honeywellLocationData.filter(r => r.statusType === 'tam');
+    const tamQty = tamItems.reduce((acc, r) => acc + r.qty, 0);
+    const tamSKUCount = new Set(tamItems.map(r => r.sku)).size;
+
+    // Update KPI cards
+    if (statLocTotalSKU) statLocTotalSKU.textContent = formatNumber(uniqueSKUCount);
+    if (statLocTotalQty) statLocTotalQty.textContent = formatNumber(totalQty);
+    if (statLocStdQty) statLocStdQty.textContent = formatNumber(stdQty);
+    if (statLocNonStdQty) statLocNonStdQty.textContent = formatNumber(nonStdQty);
+
+    // Update breakdown summary boxes
+    if (locSummaryGrid) {
+      locSummaryGrid.innerHTML = `
+        <div class="loc-summary-box warn">
+          <div class="summary-box-top">
+            <span class="box-tag red">INBOUND_QC</span>
+            <strong>${formatNumber(qcQty)} sản phẩm</strong>
+          </div>
+          <p>${qcSKUCount} SKU &bull; ${qcItems.length} dòng đang ở khu vực kiểm hàng QC (chờ putaway nhập kệ)</p>
+        </div>
+
+        <div class="loc-summary-box amber">
+          <div class="summary-box-top">
+            <span class="box-tag amber">TAM.PL.6</span>
+            <strong>${formatNumber(tamQty)} sản phẩm</strong>
+          </div>
+          <p>${tamSKUCount} SKU &bull; ${tamItems.length} dòng đang ở vị trí tạm Pallet (cần sắp xếp)</p>
+        </div>
+
+        <div class="loc-summary-box info">
+          <div class="summary-box-top">
+            <span class="box-tag blue">Chuẩn XX-YYY-Z</span>
+            <strong>${formatNumber(stdQty)} sản phẩm</strong>
+          </div>
+          <p>${stdItems.length} dòng (${new Set(stdItems.map(r => r.sku)).size} SKU) đã ở vị trí lưu kho hợp lệ</p>
+        </div>
+      `;
+    }
+
+    // Update Badges
+    if (badgeLocNonStd) badgeLocNonStd.textContent = nonStdActiveItems.length;
+    if (badgeLocQC) badgeLocQC.textContent = qcItems.length;
+    if (badgeLocTam) badgeLocTam.textContent = tamItems.length;
+    if (badgeLocStd) badgeLocStd.textContent = stdItems.length;
+    if (badgeLocAll) badgeLocAll.textContent = honeywellLocationData.length;
+
+    if (locSubtitle) {
+      locSubtitle.textContent = `Tổng: ${formatNumber(uniqueSKUCount)} SKU, ${formatNumber(totalQty)} sp. Phát hiện ${nonStdSKUCount} SKU (${formatNumber(nonStdQty)} sp) chưa ở vị trí chuẩn XX-YYY-Z!`;
+    }
+
+    // Show sections
+    if (locStatsSection) locStatsSection.style.display = 'grid';
+    if (locSummaryGrid) locSummaryGrid.style.display = 'grid';
+    if (locResultCard) locResultCard.style.display = 'block';
+
+    filterAndRenderLocationTable();
+  }
+
+  function filterAndRenderLocationTable() {
+    if (!locTableBody) return;
+
+    let filtered = honeywellLocationData.filter(item => {
+      // 1. Filter pill
+      if (currentLocFilter === 'non_std') {
+        if (!(!item.isStandard && item.qty > 0)) return false;
+      } else if (currentLocFilter === 'qc') {
+        if (item.statusType !== 'qc') return false;
+      } else if (currentLocFilter === 'tam') {
+        if (item.statusType !== 'tam') return false;
+      } else if (currentLocFilter === 'std') {
+        if (!item.isStandard) return false;
+      }
+
+      // 2. Search query
+      if (currentLocSearch) {
+        const q = currentLocSearch.toLowerCase();
+        const match =
+          item.sku.toLowerCase().includes(q) ||
+          item.code.toLowerCase().includes(q) ||
+          item.name.toLowerCase().includes(q) ||
+          item.location.toLowerCase().includes(q) ||
+          item.statusLabel.toLowerCase().includes(q) ||
+          item.note.toLowerCase().includes(q);
+        if (!match) return false;
+      }
+
+      return true;
+    });
+
+    if (locRowCount) {
+      locRowCount.textContent = `Hiển thị ${filtered.length} dòng (trên tổng ${honeywellLocationData.length} dòng)`;
+    }
+
+    if (filtered.length === 0) {
+      locTableBody.innerHTML = `
+        <tr>
+          <td colspan="8">
+            <div class="empty-state">
+              <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h4>Không tìm thấy dữ liệu phù hợp</h4>
+              <p>Thử đổi bộ lọc hoặc xóa từ khóa tìm kiếm</p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+
+    filtered.forEach((item, index) => {
+      const tr = document.createElement('tr');
+
+      let locBadgeClass = 'std';
+      let statusBadgeClass = 'std';
+
+      if (!item.isStandard) {
+        if (item.qty === 0) {
+          locBadgeClass = 'std';
+          statusBadgeClass = 'zero-qty';
+        } else {
+          locBadgeClass = 'non-std';
+          statusBadgeClass = 'non-std';
+        }
+      }
+
+      tr.innerHTML = `
+        <td style="text-align: center; color: var(--slate-400);">${index + 1}</td>
+        <td><strong>${item.sku}</strong></td>
+        <td>${item.code || '-'}</td>
+        <td style="max-width: 320px; white-space: normal;">${item.name || '-'}</td>
+        <td><span class="loc-highlight ${locBadgeClass}">${item.location || '(Trống)'}</span></td>
+        <td style="font-weight: 700; color: ${item.qty > 0 ? 'var(--slate-900)' : 'var(--slate-400)'};">${formatNumber(item.qty)}</td>
+        <td><span class="badge-status ${statusBadgeClass}">${item.statusLabel}</span></td>
+        <td style="font-size: 0.82rem; color: var(--slate-600);">${item.note}</td>
+      `;
+
+      fragment.appendChild(tr);
+    });
+
+    locTableBody.innerHTML = '';
+    locTableBody.appendChild(fragment);
+  }
+
+  // Filter Pills Event Listener for Tab 3
+  if (locFilterPills) {
+    locFilterPills.addEventListener('click', (e) => {
+      const btn = e.target.closest('.pill-btn');
+      if (!btn) return;
+
+      locFilterPills.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      currentLocFilter = btn.dataset.filter || 'non_std';
+      filterAndRenderLocationTable();
+    });
+  }
+
+  // Search Input for Tab 3
+  if (locSearchInput) {
+    locSearchInput.addEventListener('input', (e) => {
+      currentLocSearch = e.target.value.trim();
+      filterAndRenderLocationTable();
+    });
+  }
+
+  // Download Location Report Excel
+  if (btnDownloadLocReport) {
+    btnDownloadLocReport.addEventListener('click', async () => {
+      if (honeywellLocationData.length === 0) {
+        showToast('Chưa có dữ liệu để xuất báo cáo!', 'error');
+        return;
+      }
+
+      try {
+        btnDownloadLocReport.disabled = true;
+        btnDownloadLocReport.innerHTML = `<span>Đang tạo file Excel...</span>`;
+
+        const outWb = new ExcelJS.Workbook();
+        outWb.creator = 'KFM Operations Portal';
+        outWb.created = new Date();
+
+        const ws = outWb.addWorksheet('Vi_tri_ton_Honeywell', {
+          views: [{ showGridLines: true, state: 'frozen', ySplit: 1 }]
+        });
+
+        ws.columns = [
+          { header: 'STT', key: 'stt', width: 8 },
+          { header: 'Mã SKU', key: 'sku', width: 16 },
+          { header: 'Mã Hàng / Barcode', key: 'code', width: 20 },
+          { header: 'Tên Sản Phẩm', key: 'name', width: 45 },
+          { header: 'Location ID', key: 'loc', width: 20 },
+          { header: 'Số Lượng Tồn', key: 'qty', width: 16 },
+          { header: 'Trạng Thái Vị Trí', key: 'status', width: 26 },
+          { header: 'Ghi Chú Đánh Giá', key: 'note', width: 45 }
+        ];
+
+        // Style Header
+        const headerRow = ws.getRow(1);
+        headerRow.height = 26;
+        headerRow.eachCell((cell) => {
+          cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+          cell.fill = {
+            type: 'pattern',
+            pattern: 'solid',
+            fgColor: { argb: 'FF1E293B' }
+          };
+          cell.alignment = { vertical: 'middle', horizontal: 'center' };
+        });
+
+        // Add Data Rows
+        honeywellLocationData.forEach((item, idx) => {
+          const row = ws.addRow({
+            stt: idx + 1,
+            sku: item.sku,
+            code: item.code,
+            name: item.name,
+            loc: item.location,
+            qty: item.qty,
+            status: item.statusLabel,
+            note: item.note
+          });
+
+          row.getCell(1).alignment = { horizontal: 'center' };
+          row.getCell(2).alignment = { horizontal: 'center' };
+          row.getCell(3).alignment = { horizontal: 'center' };
+          row.getCell(5).alignment = { horizontal: 'center' };
+          row.getCell(6).numFmt = '#,##0';
+          row.getCell(7).alignment = { horizontal: 'center' };
+
+          // Highlight non-standard locations with qty > 0
+          if (!item.isStandard && item.qty > 0) {
+            if (item.statusType === 'qc') {
+              row.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+              row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+            } else if (item.statusType === 'tam') {
+              row.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+              row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+            } else {
+              row.getCell(5).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+              row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+            }
+          }
+        });
+
+        const outBuffer = await outWb.xlsx.writeBuffer();
+        const blob = new Blob([outBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        const now = new Date();
+        const dateStamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+        const filename = `bao_cao_location_honeywell_${dateStamp}.xlsx`;
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        showToast(`Đã xuất báo cáo: ${filename}`, 'success');
+      } catch (err) {
+        console.error(err);
+        showToast('Lỗi khi xuất báo cáo: ' + err.message, 'error');
+      } finally {
+        btnDownloadLocReport.disabled = false;
+        btnDownloadLocReport.innerHTML = `
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          Xuất Báo Cáo Location (.xlsx)
+        `;
+      }
+    });
+  }
 
 })();

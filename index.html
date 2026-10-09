@@ -51,6 +51,20 @@
             <strong>Check tồn KDB và Honeywell</strong>
             <span>So sánh tồn kho & phân tích lệch SKU</span>
           </div>
+        </button>
+
+        <!-- Tab 3: Check Vị Trí Tồn Honeywell -->
+        <button type="button" class="nav-tab-btn" id="tabBtnLocHW" data-tab="tabLocHW">
+          <div class="tab-btn-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+            </svg>
+          </div>
+          <div class="tab-btn-text">
+            <strong>Check vị trí tồn Honeywell</strong>
+            <span>Kiểm tra SKU & Location chuẩn XX-YYY-Z</span>
+          </div>
           <span class="tab-badge-new">Mới</span>
         </button>
       </nav>
@@ -645,6 +659,201 @@
               </thead>
               <tbody id="invTableBody">
                 <!-- Data populated dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </section>
+
+      <!-- ========================================== -->
+      <!-- TAB 3: CHECK VỊ TRÍ TỒN HONEYWELL -->
+      <!-- ========================================== -->
+      <section class="tab-pane" id="tabLocHW" style="display:none;">
+
+        <!-- Header -->
+        <header class="content-header">
+          <div>
+            <h1>Check vị trí tồn Honeywell (Chuẩn XX-YYY-Z)</h1>
+            <p>Kiểm tra số lượng SKU, tổng tồn và phát hiện các mặt hàng chưa có trong location chuẩn XX-YYY-Z (đang ở INBOUND_QC, TAM.PL.6,...)</p>
+          </div>
+          <div class="header-badge amber">
+            <span class="badge-dot amber"></span>
+            <span>Kiểm Soát Vị Trí Lưu Kho</span>
+          </div>
+        </header>
+
+        <!-- Upload Honeywell Section -->
+        <div class="loc-upload-bar">
+          <div class="loc-upload-left">
+            <div class="inv-icon blue">
+              <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+              </svg>
+            </div>
+            <div>
+              <h3>File Tồn Honeywell Đang Kiểm Tra</h3>
+              <p id="locFileName">Chưa chọn file (Nhấn nút bên phải hoặc tải mẫu)</p>
+            </div>
+          </div>
+          <div class="loc-upload-right">
+            <input type="file" id="fileInputLoc" accept=".xlsx, .xls" style="display:none;" />
+            <button type="button" class="btn-secondary" id="btnSelectLocFile">
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              Chọn File Excel
+            </button>
+            <button type="button" class="btn-demo-file" id="btnLoadDemoLoc">
+              Tải file mẫu Tồn Honeywell có sẵn
+            </button>
+          </div>
+        </div>
+
+        <!-- Location Statistics Cards -->
+        <div class="stats-section loc-stats" id="locStatsSection" style="display:none;">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Tổng Số SKU</p>
+              <h4 id="statLocTotalSKU">0</h4>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Tổng Số Lượng Tồn</p>
+              <h4 id="statLocTotalQty">0</h4>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Ở Vị Trí Chuẩn XX-YYY-Z</p>
+              <h4 id="statLocStdQty">0</h4>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon red">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Chưa Vào Chuẩn (Có Tồn > 0)</p>
+              <h4 id="statLocNonStdQty">0</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Location Breakdown Cards -->
+        <div class="loc-summary-grid" id="locSummaryGrid" style="display:none;">
+          <div class="loc-summary-box warn">
+            <div class="summary-box-top">
+              <span class="box-tag red">INBOUND_QC</span>
+              <strong>10.312 sản phẩm</strong>
+            </div>
+            <p>136 SKU &bull; 138 dòng đang ở khu vực kiểm hàng QC (chờ putaway nhập kệ)</p>
+          </div>
+
+          <div class="loc-summary-box amber">
+            <div class="summary-box-top">
+              <span class="box-tag amber">TAM.PL.6</span>
+              <strong>582 sản phẩm</strong>
+            </div>
+            <p>6 SKU &bull; 7 dòng đang ở vị trí tạm Pallet (cần sắp xếp)</p>
+          </div>
+
+          <div class="loc-summary-box info">
+            <div class="summary-box-top">
+              <span class="box-tag blue">Chuẩn XX-YYY-Z</span>
+              <strong>18.961 sản phẩm</strong>
+            </div>
+            <p>268 dòng đã ở vị trí lưu kho hợp lệ theo quy chuẩn</p>
+          </div>
+        </div>
+
+        <!-- Location Results Table -->
+        <section class="preview-card" id="locResultCard" style="display:none;">
+          <div class="preview-header">
+            <div class="preview-title-group">
+              <h3>Danh Sách Chi Tiết Vị Trí Tồn Kho</h3>
+              <p id="locSubtitle">Phát hiện các mã chưa có trong vị trí chuẩn XX-YYY-Z</p>
+            </div>
+            <div class="action-buttons">
+              <button type="button" class="btn-download" id="btnDownloadLocReport">
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Xuất Báo Cáo Location (.xlsx)
+              </button>
+            </div>
+          </div>
+
+          <!-- Filter Toolbar for Location -->
+          <div class="inv-filter-toolbar">
+            <div class="filter-pills" id="locFilterPills">
+              <button type="button" class="pill-btn active" data-filter="non_std">
+                Chưa Vào Chuẩn (Có Tồn) <span class="pill-badge" id="badgeLocNonStd">0</span>
+              </button>
+              <button type="button" class="pill-btn" data-filter="qc">
+                INBOUND_QC <span class="pill-badge" id="badgeLocQC">0</span>
+              </button>
+              <button type="button" class="pill-btn" data-filter="tam">
+                TAM.PL.6 <span class="pill-badge" id="badgeLocTam">0</span>
+              </button>
+              <button type="button" class="pill-btn" data-filter="std">
+                Vị Trí Chuẩn XX-YYY-Z <span class="pill-badge" id="badgeLocStd">0</span>
+              </button>
+              <button type="button" class="pill-btn" data-filter="all">
+                Tất Cả Dòng <span class="pill-badge" id="badgeLocAll">0</span>
+              </button>
+            </div>
+
+            <div class="inv-search-row">
+              <div class="search-box">
+                <svg class="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+                </svg>
+                <input type="text" id="locSearchInput" placeholder="Tìm theo SKU, mã vạch, tên hàng, location..." />
+              </div>
+              <div class="table-stats" id="locRowCount">Hiển thị 0 dòng</div>
+            </div>
+          </div>
+
+          <!-- Table -->
+          <div class="table-responsive">
+            <table class="data-table" id="locTable">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">STT</th>
+                  <th>Mã SKU</th>
+                  <th>Mã Hàng / Barcode</th>
+                  <th>Tên Sản Phẩm</th>
+                  <th>Location ID</th>
+                  <th>Số Lượng Tồn</th>
+                  <th>Trạng Thái Vị Trí</th>
+                  <th>Ghi Chú Đánh Giá</th>
+                </tr>
+              </thead>
+              <tbody id="locTableBody">
+                <!-- Dynamically populated -->
               </tbody>
             </table>
           </div>
