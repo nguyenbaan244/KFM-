@@ -1,0 +1,15 @@
+# Temp excel lock files
+~$*.xlsx
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Vercel & Node
+.vercel
+node_modules/
+
+# OS
+.DS_Store
+Thumbs.db

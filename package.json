@@ -1,0 +1,12 @@
+{
+  "name": "po-to-inbound-converter",
+  "version": "1.0.0",
+  "description": "Chuyển đổi dữ liệu từ File PO sang File Nhập Hàng",
+  "main": "index.html",
+  "scripts": {
+    "start": "python server.py"
+  },
+  "keywords": ["excel", "converter", "po", "inbound"],
+  "author": "",
+  "license": "MIT"
+}
