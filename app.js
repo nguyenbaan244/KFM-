@@ -1,8 +1,90 @@
-// PO to Inbound Data Converter Application
+// KFM WMS Portal Application - PO Converter & Inventory Reconciliation
 (function () {
   'use strict';
 
-  // DOM Elements
+  // ============================================================
+  // TAB NAVIGATION
+  // ============================================================
+  const tabBtnConvert = document.getElementById('tabBtnConvert');
+  const tabBtnInventory = document.getElementById('tabBtnInventory');
+  const tabConvert = document.getElementById('tabConvert');
+  const tabInventory = document.getElementById('tabInventory');
+
+  function switchTab(targetTab) {
+    if (targetTab === 'tabConvert') {
+      tabBtnConvert.classList.add('active');
+      tabBtnInventory.classList.remove('active');
+      tabConvert.style.display = 'block';
+      tabInventory.style.display = 'none';
+    } else {
+      tabBtnInventory.classList.add('active');
+      tabBtnConvert.classList.remove('active');
+      tabInventory.style.display = 'block';
+      tabConvert.style.display = 'none';
+    }
+  }
+
+  tabBtnConvert.addEventListener('click', () => switchTab('tabConvert'));
+  tabBtnInventory.addEventListener('click', () => switchTab('tabInventory'));
+
+  // ============================================================
+  // UTILITIES
+  // ============================================================
+  const toastContainer = document.getElementById('toastContainer');
+
+  function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.textContent = message;
+    toastContainer.appendChild(toast);
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transform = 'translateY(10px)';
+      toast.style.transition = 'all 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 3500);
+  }
+
+  function base64ToArrayBuffer(base64) {
+    const binaryString = window.atob(base64);
+    const len = binaryString.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
+    }
+    return bytes.buffer;
+  }
+
+  function formatDate(val) {
+    if (!val) return '';
+    if (val instanceof Date && !isNaN(val)) {
+      const day = String(val.getDate()).padStart(2, '0');
+      const month = String(val.getMonth() + 1).padStart(2, '0');
+      const year = val.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+    if (typeof val === 'object' && val.result) {
+      return formatDate(val.result);
+    }
+    const str = String(val).trim();
+    if (str.toLowerCase() === 'none') return '';
+    if (str.includes(' ')) {
+      const parts = str.split(/\s+/);
+      if (parts[0].includes('/') || parts[0].includes('-')) {
+        return parts[0];
+      }
+    }
+    return str;
+  }
+
+  function formatNumber(num) {
+    if (num == null || isNaN(num)) return '0';
+    return Number(num).toLocaleString('vi-VN');
+  }
+
+  // ============================================================
+  // TAB 1: CONVERT TEMPLATE KDB -> HONEYWELL
+  // ============================================================
   const dropZone = document.getElementById('dropZone');
   const fileInput = document.getElementById('fileInput');
   const btnSelectFile = document.getElementById('btnSelectFile');
@@ -27,74 +109,16 @@
   const searchInput = document.getElementById('searchInput');
   const tableRowCount = document.getElementById('tableRowCount');
   const tableBody = document.getElementById('tableBody');
-  const toastContainer = document.getElementById('toastContainer');
 
-  // Application State
   let convertedRows = [];
   let sourceFileName = '';
   let uniquePOCodes = new Set();
   let defaultSupplier = '';
 
-  // Utility: Convert Base64 to ArrayBuffer
-  function base64ToArrayBuffer(base64) {
-    const binaryString = window.atob(base64);
-    const len = binaryString.length;
-    const bytes = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-      bytes[i] = binaryString.charCodeAt(i);
-    }
-    return bytes.buffer;
-  }
-
-  // Utility: Show Toast Notification
-  function showToast(message, type = 'info') {
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.textContent = message;
-    toastContainer.appendChild(toast);
-    setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(10px)';
-      toast.style.transition = 'all 0.3s ease';
-      setTimeout(() => toast.remove(), 300);
-    }, 3500);
-  }
-
-  // Format Date to DD/MM/YYYY
-  function formatDate(val) {
-    if (!val) return '';
-    if (val instanceof Date && !isNaN(val)) {
-      const day = String(val.getDate()).padStart(2, '0');
-      const month = String(val.getMonth() + 1).padStart(2, '0');
-      const year = val.getFullYear();
-      return `${day}/${month}/${year}`;
-    }
-    if (typeof val === 'object' && val.result) {
-      return formatDate(val.result);
-    }
-    const str = String(val).trim();
-    if (str.toLowerCase() === 'none') return '';
-    if (str.includes(' ')) {
-      const parts = str.split(/\s+/);
-      if (parts[0].includes('/') || parts[0].includes('-')) {
-        return parts[0];
-      }
-    }
-    return str;
-  }
-
-  // Format Number with Commas
-  function formatNumber(num) {
-    if (num == null || isNaN(num)) return '0';
-    return Number(num).toLocaleString('vi-VN');
-  }
-
-  // Accordion Toggle for Mapping Logic
   btnToggleLogic.addEventListener('click', () => {
     logicBanner.classList.toggle('collapsed');
   });
 
-  // Drag and Drop Handling
   ['dragenter', 'dragover'].forEach(eventName => {
     dropZone.addEventListener(eventName, (e) => {
       e.preventDefault();
@@ -129,7 +153,6 @@
     }
   });
 
-  // Demo File Handler
   btnLoadDemo.addEventListener('click', async (e) => {
     e.stopPropagation();
     try {
@@ -147,7 +170,6 @@
     }
   });
 
-  // Handle uploaded File
   async function handleIncomingFile(file) {
     const validExtensions = ['.xlsx', '.xls'];
     const fileName = file.name.toLowerCase();
@@ -159,7 +181,7 @@
     }
 
     try {
-      showToast('Đang đọc và phân tích file...', 'info');
+      showToast('Đang đọc và phân tích file PO...', 'info');
       sourceFileName = file.name;
       const arrayBuffer = await file.arrayBuffer();
       await parsePOData(arrayBuffer, file.name);
@@ -170,7 +192,6 @@
     }
   }
 
-  // Parse PO Excel file and Map to Inbound format
   async function parsePOData(arrayBuffer, fileName) {
     if (typeof ExcelJS === 'undefined') {
       throw new Error('Thư viện ExcelJS chưa sẵn sàng.');
@@ -185,14 +206,6 @@
 
     const poWs = poWb.worksheets[0];
 
-    // Find columns by header name or use user defaults:
-    // Cột B: 2 (Mã PO) -> Cột A
-    // Cột T: 20 (Mã hàng) -> Cột B
-    // Cột AD: 30 (Số lượng PR thực nhận) -> Cột C (bỏ nếu = 0)
-    // Cột G: 7 (Ngày NCC xác nhận) -> Cột D
-    // Cột K: 11 (Tên NCC) -> Cột G
-    // Cột X: 24 (NSX) -> Cột H
-    // Cột Y: 25 (HSD) -> Cột I
     let colB_po = 2;
     let colT_product = 20;
     let colAD_qty = 30;
@@ -201,7 +214,6 @@
     let colX_nsx = 24;
     let colY_hsd = 25;
 
-    // Detect header row (row 1)
     const headerRow = poWs.getRow(1);
     if (headerRow) {
       headerRow.eachCell({ includeEmpty: false }, (cell, colNumber) => {
@@ -234,7 +246,6 @@
     const currentNote = inputCustomerNote.value.trim();
     const todayStr = formatDate(new Date());
 
-    // Loop through rows starting from row 2
     for (let r = 2; r <= poWs.rowCount; r++) {
       const row = poWs.getRow(r);
       const poCodeVal = row.getCell(colB_po).value;
@@ -245,7 +256,6 @@
       const nsxVal = row.getCell(colX_nsx).value;
       const hsdVal = row.getCell(colY_hsd).value;
 
-      // Ignore row if both PO code and Product code are blank
       if (poCodeVal == null && productVal == null) {
         continue;
       }
@@ -255,7 +265,7 @@
       const qtyNum = qtyVal != null ? Number(qtyVal) : 0;
       const qty = !isNaN(qtyNum) ? qtyNum : 0;
 
-      // Lưu ý: nếu dòng số lượng thực nhận ở cột AD trong file PO = 0 thì bỏ luôn dòng đó
+      // Bỏ qua dòng nếu số lượng thực nhận <= 0
       if (qty <= 0) {
         skippedZeroCount++;
         continue;
@@ -289,7 +299,6 @@
       throw new Error('Không tìm thấy dòng dữ liệu nào hợp lệ trong file PO.');
     }
 
-    // Auto suggest file name if empty
     const firstPo = Array.from(uniquePOCodes)[0] || 'DATA';
     const now = new Date();
     const dateStamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
@@ -298,9 +307,7 @@
     updateUI(totalQty, skippedZeroCount);
   }
 
-  // Update UI Elements
   function updateUI(totalQty, skippedZeroCount = 0) {
-    // Stats
     statTotalRows.textContent = convertedRows.length;
     statPOCode.textContent = Array.from(uniquePOCodes).join(', ') || '-';
     statTotalQty.textContent = formatNumber(totalQty);
@@ -321,7 +328,6 @@
     renderTableRows(convertedRows);
   }
 
-  // Render Table Rows (Using safe DOM manipulation, avoiding innerHTML with user data)
   function renderTableRows(rows) {
     while (tableBody.firstChild) {
       tableBody.removeChild(tableBody.firstChild);
@@ -346,51 +352,41 @@
     rows.forEach(item => {
       const tr = document.createElement('tr');
 
-      // Col A: Mã PO
       const tdA = document.createElement('td');
       const spanA = document.createElement('strong');
       spanA.textContent = item.colA_poCode;
       tdA.appendChild(spanA);
 
-      // Col B: Mã hàng (productCode)
       const tdB = document.createElement('td');
       tdB.textContent = item.colB_productCode;
       tdB.style.fontFamily = 'monospace';
       tdB.style.fontWeight = '600';
 
-      // Col C: Số lượng
       const tdC = document.createElement('td');
       tdC.textContent = formatNumber(item.colC_expectedQty);
       tdC.style.fontWeight = '600';
 
-      // Col D: Thời gian dự kiến
       const tdD = document.createElement('td');
       tdD.textContent = item.colD_estimateReceiveTime;
 
-      // Col E: Ghi chú khách hàng (Để trống theo mặc định)
       const tdE = document.createElement('td');
       tdE.textContent = currentNote || item.colE_customerNote || '';
 
-      // Col F: Kênh bán hàng (B2B)
       const tdF = document.createElement('td');
       const badgeF = document.createElement('span');
       badgeF.className = 'badge-channel';
       badgeF.textContent = currentChannel || item.colF_zoneType || 'B2B';
       tdF.appendChild(badgeF);
 
-      // Col G: Nhà cung cấp
       const tdG = document.createElement('td');
       tdG.textContent = item.colG_supplier;
 
-      // Col H: NSX
       const tdH = document.createElement('td');
       tdH.textContent = item.colH_productionDate;
 
-      // Col I: HSD
       const tdI = document.createElement('td');
       tdI.textContent = item.colI_expiryDate;
 
-      // Col J: Ngày nhập kho
       const tdJ = document.createElement('td');
       tdJ.textContent = item.colJ_inboundDate;
 
@@ -411,7 +407,6 @@
     tableRowCount.textContent = `Hiển thị ${rows.length} / ${convertedRows.length} dòng`;
   }
 
-  // Search Filter Handler
   searchInput.addEventListener('input', () => {
     const query = searchInput.value.toLowerCase().trim();
     if (!query) {
@@ -433,20 +428,14 @@
     renderTableRows(filtered);
   });
 
-  // Re-render when Settings change
   selectChannel.addEventListener('change', () => {
-    if (convertedRows.length > 0) {
-      renderTableRows(convertedRows);
-    }
+    if (convertedRows.length > 0) renderTableRows(convertedRows);
   });
 
   inputCustomerNote.addEventListener('input', () => {
-    if (convertedRows.length > 0) {
-      renderTableRows(convertedRows);
-    }
+    if (convertedRows.length > 0) renderTableRows(convertedRows);
   });
 
-  // Reset Handler
   btnReset.addEventListener('click', () => {
     convertedRows = [];
     sourceFileName = '';
@@ -486,7 +475,6 @@
     showToast('Đã làm mới dữ liệu!', 'info');
   });
 
-  // Download Output Excel File
   btnDownload.addEventListener('click', async () => {
     if (convertedRows.length === 0) {
       showToast('Chưa có dữ liệu để xuất file!', 'error');
@@ -499,23 +487,17 @@
       showToast('Đang tạo file nhập hàng...', 'info');
 
       if (typeof TEMPLATE_BASE64 === 'undefined') {
-        throw new Error('Template file_nhap_hang (1) (1).xlsx không tồn tại.');
+        throw new Error('Template file_nhap_hang không tồn tại.');
       }
 
-      // Load Template
       const templateBuffer = base64ToArrayBuffer(TEMPLATE_BASE64);
       const outWb = new ExcelJS.Workbook();
       await outWb.xlsx.load(templateBuffer);
 
       let outWs = outWb.getWorksheet('File nhập hàng');
-      if (!outWs) {
-        outWs = outWb.worksheets[0];
-      }
-      if (!outWs) {
-        throw new Error('Không tìm thấy sheet "File nhập hàng" trong file mẫu.');
-      }
+      if (!outWs) outWs = outWb.worksheets[0];
+      if (!outWs) throw new Error('Không tìm thấy sheet "File nhập hàng" trong file mẫu.');
 
-      // Clear sample rows in template if any
       while (outWs.rowCount >= 3) {
         outWs.spliceRows(3, 1);
       }
@@ -523,42 +505,29 @@
       const selectedZone = selectChannel.value || 'B2B';
       const userNote = inputCustomerNote.value || '';
 
-      // Populate data rows starting at Row 3
       convertedRows.forEach((item, index) => {
         const rowNumber = 3 + index;
         const targetRow = outWs.getRow(rowNumber);
 
-        // Col A: Mã PO
         targetRow.getCell(1).value = item.colA_poCode || '';
-        // Col B: Mã sản phẩm (Mã hàng)
         targetRow.getCell(2).value = item.colB_productCode || '';
-        // Col C: Số lượng nhập (Number)
         targetRow.getCell(3).value = Number(item.colC_expectedQty) || 0;
-        // Col D: Thời gian dự kiến (dd/mm/yyyy)
         targetRow.getCell(4).value = item.colD_estimateReceiveTime || '';
-        // Col E: Ghi chú của khách hàng (Để trống hoặc userNote nếu có)
         targetRow.getCell(5).value = userNote || item.colE_customerNote || '';
-        // Col F: Kênh bán hàng (B2B)
         targetRow.getCell(6).value = selectedZone;
-        // Col G: Nhà cung cấp
         targetRow.getCell(7).value = item.colG_supplier || '';
-        // Col H: Ngày sản xuất
         targetRow.getCell(8).value = item.colH_productionDate || '';
-        // Col I: Hạn sử dụng
         targetRow.getCell(9).value = item.colI_expiryDate || '';
-        // Col J: Ngày nhập kho (Today)
         targetRow.getCell(10).value = item.colJ_inboundDate || '';
 
         targetRow.commit();
       });
 
-      // Generate Download File
       const outBuffer = await outWb.xlsx.writeBuffer();
       const blob = new Blob([outBuffer], {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
       });
 
-      // Filename determination
       let filename = inputFilename.value.trim();
       if (!filename) {
         const firstPo = Array.from(uniquePOCodes)[0] || 'DON_HANG';
@@ -570,7 +539,6 @@
         filename += '.xlsx';
       }
 
-      // Trigger Browser Download
       const downloadUrl = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = downloadUrl;
@@ -591,6 +559,631 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
         </svg>
         Xuất File Nhập Hàng (.xlsx)
+      `;
+    }
+  });
+
+  // ============================================================
+  // TAB 2: CHECK TỒN KDB VÀ HONEYWELL
+  // ============================================================
+  const dropZoneHW = document.getElementById('dropZoneHW');
+  const dropZoneKDB = document.getElementById('dropZoneKDB');
+  const fileInputHW = document.getElementById('fileInputHW');
+  const fileInputKDB = document.getElementById('fileInputKDB');
+  const btnSelectHW = document.getElementById('btnSelectHW');
+  const btnSelectKDB = document.getElementById('btnSelectKDB');
+  const statusHW = document.getElementById('statusHW');
+  const statusKDB = document.getElementById('statusKDB');
+  const fileNameHW = document.getElementById('fileNameHW');
+  const fileNameKDB = document.getElementById('fileNameKDB');
+  const btnLoadDemoInventory = document.getElementById('btnLoadDemoInventory');
+  const btnCompareInventory = document.getElementById('btnCompareInventory');
+
+  const invStatsSection = document.getElementById('invStatsSection');
+  const statInvTotal = document.getElementById('statInvTotal');
+  const statInvMatch = document.getElementById('statInvMatch');
+  const statInvDiff = document.getElementById('statInvDiff');
+  const statInvNetQty = document.getElementById('statInvNetQty');
+
+  const invResultCard = document.getElementById('invResultCard');
+  const invSubtitle = document.getElementById('invSubtitle');
+  const btnResetInventory = document.getElementById('btnResetInventory');
+  const btnDownloadInventoryReport = document.getElementById('btnDownloadInventoryReport');
+
+  const filterPills = document.getElementById('filterPills');
+  const invSearchInput = document.getElementById('invSearchInput');
+  const invRowCount = document.getElementById('invRowCount');
+  const invTableBody = document.getElementById('invTableBody');
+
+  const badgeDiff = document.getElementById('badgeDiff');
+  const badgeDiffQty = document.getElementById('badgeDiffQty');
+  const badgeOnlyKDB = document.getElementById('badgeOnlyKDB');
+  const badgeOnlyHW = document.getElementById('badgeOnlyHW');
+  const badgeMatch = document.getElementById('badgeMatch');
+  const badgeAll = document.getElementById('badgeAll');
+
+  // Inventory State
+  let hwBuffer = null;
+  let kdbBuffer = null;
+  let nameFileHW = '';
+  let nameFileKDB = '';
+  let comparisonResults = [];
+  let currentInvFilter = 'diff'; // 'diff', 'diff_qty', 'only_kdb', 'only_hw', 'match', 'all'
+
+  // Dropzone Events for HW
+  ['dragenter', 'dragover'].forEach(name => {
+    dropZoneHW.addEventListener(name, (e) => {
+      e.preventDefault();
+      dropZoneHW.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(name => {
+    dropZoneHW.addEventListener(name, (e) => {
+      e.preventDefault();
+      dropZoneHW.classList.remove('dragover');
+    });
+  });
+  dropZoneHW.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files.length > 0) handleHWFile(e.dataTransfer.files[0]);
+  });
+  btnSelectHW.addEventListener('click', () => {
+    fileInputHW.value = '';
+    fileInputHW.click();
+  });
+  fileInputHW.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) handleHWFile(e.target.files[0]);
+  });
+
+  // Dropzone Events for KDB
+  ['dragenter', 'dragover'].forEach(name => {
+    dropZoneKDB.addEventListener(name, (e) => {
+      e.preventDefault();
+      dropZoneKDB.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'drop'].forEach(name => {
+    dropZoneKDB.addEventListener(name, (e) => {
+      e.preventDefault();
+      dropZoneKDB.classList.remove('dragover');
+    });
+  });
+  dropZoneKDB.addEventListener('drop', (e) => {
+    if (e.dataTransfer.files.length > 0) handleKDBFile(e.dataTransfer.files[0]);
+  });
+  btnSelectKDB.addEventListener('click', () => {
+    fileInputKDB.value = '';
+    fileInputKDB.click();
+  });
+  fileInputKDB.addEventListener('change', (e) => {
+    if (e.target.files.length > 0) handleKDBFile(e.target.files[0]);
+  });
+
+  async function handleHWFile(file) {
+    if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+      showToast('Vui lòng chọn file Excel Honeywell (.xlsx hoặc .xls)!', 'error');
+      return;
+    }
+    nameFileHW = file.name;
+    hwBuffer = await file.arrayBuffer();
+    setHWReady(nameFileHW);
+    checkEnableCompare();
+  }
+
+  async function handleKDBFile(file) {
+    if (!file.name.toLowerCase().endsWith('.xlsx') && !file.name.toLowerCase().endsWith('.xls')) {
+      showToast('Vui lòng chọn file Excel KDB (.xlsx hoặc .xls)!', 'error');
+      return;
+    }
+    nameFileKDB = file.name;
+    kdbBuffer = await file.arrayBuffer();
+    setKDBReady(nameFileKDB);
+    checkEnableCompare();
+  }
+
+  function setHWReady(filename) {
+    dropZoneHW.classList.add('has-file');
+    statusHW.innerHTML = '<span class="status-badge ready">Đã sẵn sàng</span>';
+    fileNameHW.textContent = filename;
+    showToast(`Đã nhận file Honeywell: ${filename}`, 'info');
+  }
+
+  function setKDBReady(filename) {
+    dropZoneKDB.classList.add('has-file');
+    statusKDB.innerHTML = '<span class="status-badge ready">Đã sẵn sàng</span>';
+    fileNameKDB.textContent = filename;
+    showToast(`Đã nhận file KDB: ${filename}`, 'info');
+  }
+
+  function checkEnableCompare() {
+    btnCompareInventory.disabled = !(hwBuffer && kdbBuffer);
+  }
+
+  // Load Demo Inventory Files
+  btnLoadDemoInventory.addEventListener('click', () => {
+    if (typeof SAMPLE_HW_BASE64 === 'undefined' || typeof SAMPLE_KDB_BASE64 === 'undefined') {
+      showToast('Không tìm thấy dữ liệu tồn kho mẫu cục bộ.', 'error');
+      return;
+    }
+    try {
+      nameFileHW = 'Tồn Honeywell.xlsx';
+      nameFileKDB = 'Tồn KDB.xlsx';
+      hwBuffer = base64ToArrayBuffer(SAMPLE_HW_BASE64);
+      kdbBuffer = base64ToArrayBuffer(SAMPLE_KDB_BASE64);
+      setHWReady(nameFileHW);
+      setKDBReady(nameFileKDB);
+      checkEnableCompare();
+      showToast('Đã tải thành công 2 file mẫu Tồn Honeywell và Tồn KDB!', 'success');
+      // Auto run comparison on demo load
+      runInventoryComparison();
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi tải dữ liệu mẫu: ' + err.message, 'error');
+    }
+  });
+
+  // Run Comparison Button
+  btnCompareInventory.addEventListener('click', () => {
+    runInventoryComparison();
+  });
+
+  async function runInventoryComparison() {
+    if (!hwBuffer || !kdbBuffer) {
+      showToast('Vui lòng tải lên cả 2 file Honeywell và KDB!', 'error');
+      return;
+    }
+
+    try {
+      showToast('Đang phân tích và đối soát tồn kho...', 'info');
+      btnCompareInventory.disabled = true;
+
+      // 1. Parse Honeywell
+      const hwWb = new ExcelJS.Workbook();
+      await hwWb.xlsx.load(hwBuffer);
+      const hwWs = hwWb.worksheets[0];
+
+      let colHw_sku = 3;
+      let colHw_mcode = 4;
+      let colHw_name = 6;
+      let colHw_qty = 12;
+
+      const hwHeaderRow = hwWs.getRow(1);
+      if (hwHeaderRow) {
+        hwHeaderRow.eachCell((cell, colNumber) => {
+          const v = String(cell.value || '').trim().toLowerCase();
+          if (v === 'sku') colHw_sku = colNumber;
+          else if (v === 'mcode' || v === 'm code' || v === 'barcode' || v === 'mã vạch') colHw_mcode = colNumber;
+          else if (v === 'sku name' || v === 'tên hàng' || v === 'tên sản phẩm') colHw_name = colNumber;
+          else if (v.includes('total quantity') || v.includes('total qty')) colHw_qty = colNumber;
+        });
+      }
+
+      const hwMap = new Map(); // key (mcode or sku) -> { sku, mcode, name, totalQty }
+
+      for (let r = 2; r <= hwWs.rowCount; r++) {
+        const row = hwWs.getRow(r);
+        const skuVal = row.getCell(colHw_sku).value;
+        const mcodeVal = row.getCell(colHw_mcode).value;
+        const nameVal = row.getCell(colHw_name).value;
+        const qtyVal = row.getCell(colHw_qty).value;
+
+        const sku = skuVal != null ? String(skuVal).trim() : '';
+        const mcode = mcodeVal != null ? String(mcodeVal).trim() : '';
+        const name = nameVal != null ? String(nameVal).trim() : '';
+        const key = mcode || sku;
+
+        if (!key) continue;
+
+        const qtyNum = qtyVal != null ? Number(qtyVal) : 0;
+        const qty = !isNaN(qtyNum) ? qtyNum : 0;
+
+        if (!hwMap.has(key)) {
+          hwMap.set(key, { sku, mcode, name, qty: 0 });
+        }
+        const item = hwMap.get(key);
+        item.qty += qty;
+        if (!item.sku && sku) item.sku = sku;
+        if (!item.name && name) item.name = name;
+      }
+
+      // 2. Parse KDB
+      const kdbWb = new ExcelJS.Workbook();
+      await kdbWb.xlsx.load(kdbBuffer);
+      const kdbWs = kdbWb.worksheets[0];
+
+      let colKdb_code = 3;
+      let colKdb_name = 4;
+      let colKdb_qty = 13;
+
+      const kdbHeaderRow = kdbWs.getRow(1);
+      if (kdbHeaderRow) {
+        kdbHeaderRow.eachCell((cell, colNumber) => {
+          const v = String(cell.value || '').trim().toLowerCase();
+          if (v === 'mã hàng' || v === 'ma hang' || v === 'mã sp' || v === 'barcode' || v === 'sku') {
+            colKdb_code = colNumber;
+          } else if (v === 'tên hàng' || v === 'ten hang' || v === 'tên sản phẩm') {
+            colKdb_name = colNumber;
+          } else if ((v.includes('tồn cuối kỳ') || v.includes('ton cuoi ky') || v.includes('tồn kho')) && !v.includes('giá trị') && !v.includes('gia tri')) {
+            colKdb_qty = colNumber;
+          }
+        });
+      }
+
+      const kdbMap = new Map(); // code -> { code, name, qty }
+
+      for (let r = 2; r <= kdbWs.rowCount; r++) {
+        const row = kdbWs.getRow(r);
+        const codeVal = row.getCell(colKdb_code).value;
+        const nameVal = row.getCell(colKdb_name).value;
+        const qtyVal = row.getCell(colKdb_qty).value;
+
+        const code = codeVal != null ? String(codeVal).trim() : '';
+        const name = nameVal != null ? String(nameVal).trim() : '';
+
+        if (!code) continue;
+
+        const qtyNum = qtyVal != null ? Number(qtyVal) : 0;
+        const qty = !isNaN(qtyNum) ? qtyNum : 0;
+
+        if (!kdbMap.has(code)) {
+          kdbMap.set(code, { code, name, qty: 0 });
+        }
+        const item = kdbMap.get(code);
+        item.qty += qty;
+        if (!item.name && name) item.name = name;
+      }
+
+      // 3. Reconcile
+      const allKeys = new Set([...hwMap.keys(), ...kdbMap.keys()]);
+      comparisonResults = [];
+
+      let countMatch = 0;
+      let countDiffQty = 0;
+      let countOnlyKDB = 0;
+      let countOnlyHW = 0;
+      let netDiffQty = 0;
+
+      allKeys.forEach(code => {
+        const inHW = hwMap.has(code);
+        const inKDB = kdbMap.has(code);
+        const hwItem = hwMap.get(code) || { sku: '', mcode: code, name: '', qty: 0 };
+        const kdbItem = kdbMap.get(code) || { code: code, name: '', qty: 0 };
+
+        const qHW = hwItem.qty;
+        const qKDB = kdbItem.qty;
+        const diff = qHW - qKDB;
+        netDiffQty += diff;
+
+        let status = '';
+        let statusType = '';
+
+        if (inHW && inKDB) {
+          if (diff === 0) {
+            status = 'Khớp hoàn toàn';
+            statusType = 'match';
+            countMatch++;
+          } else {
+            status = 'Lệch số lượng';
+            statusType = 'diff_qty';
+            countDiffQty++;
+          }
+        } else if (inKDB && !inHW) {
+          status = 'Chỉ có ở KDB';
+          statusType = 'only_kdb';
+          countOnlyKDB++;
+        } else {
+          status = 'Chỉ có ở Honeywell';
+          statusType = 'only_hw';
+          countOnlyHW++;
+        }
+
+        comparisonResults.push({
+          code: code,
+          sku: hwItem.sku || '',
+          name: hwItem.name || kdbItem.name || '',
+          qKDB: qKDB,
+          qHW: qHW,
+          diff: diff,
+          status: status,
+          statusType: statusType
+        });
+      });
+
+      // Sort: Discrepant items first, ordered by largest difference
+      comparisonResults.sort((a, b) => {
+        if (a.statusType === 'match' && b.statusType !== 'match') return 1;
+        if (a.statusType !== 'match' && b.statusType === 'match') return -1;
+        return Math.abs(b.diff) - Math.abs(a.diff);
+      });
+
+      const totalDiffItems = countDiffQty + countOnlyKDB + countOnlyHW;
+
+      // Update Badges
+      badgeDiff.textContent = totalDiffItems;
+      badgeDiffQty.textContent = countDiffQty;
+      badgeOnlyKDB.textContent = countOnlyKDB;
+      badgeOnlyHW.textContent = countOnlyHW;
+      badgeMatch.textContent = countMatch;
+      badgeAll.textContent = comparisonResults.length;
+
+      // Update Stats
+      statInvTotal.textContent = formatNumber(comparisonResults.length);
+      statInvMatch.textContent = `${formatNumber(countMatch)} (${((countMatch/comparisonResults.length)*100).toFixed(1)}%)`;
+      statInvDiff.textContent = `${formatNumber(totalDiffItems)} (${((totalDiffItems/comparisonResults.length)*100).toFixed(1)}%)`;
+      statInvNetQty.textContent = `${netDiffQty > 0 ? '+' : ''}${formatNumber(netDiffQty)}`;
+
+      invStatsSection.style.display = 'grid';
+      invResultCard.style.display = 'block';
+
+      invSubtitle.textContent = `Đối soát: ${nameFileHW} & ${nameFileKDB} — ${totalDiffItems} SKU lệch, ${countMatch} SKU khớp`;
+
+      renderInventoryTable();
+      showToast(`Đối soát xong ${comparisonResults.length} SKU! Có ${totalDiffItems} SKU bị lệch tồn.`, 'success');
+    } catch (err) {
+      console.error('Inventory compare error:', err);
+      showToast('Lỗi đối soát tồn kho: ' + err.message, 'error');
+    } finally {
+      btnCompareInventory.disabled = false;
+    }
+  }
+
+  // Filter Pills Handling
+  filterPills.querySelectorAll('.pill-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterPills.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentInvFilter = btn.dataset.filter;
+      renderInventoryTable();
+    });
+  });
+
+  // Search in inventory
+  invSearchInput.addEventListener('input', () => {
+    renderInventoryTable();
+  });
+
+  function renderInventoryTable() {
+    while (invTableBody.firstChild) {
+      invTableBody.removeChild(invTableBody.firstChild);
+    }
+
+    const query = invSearchInput.value.toLowerCase().trim();
+
+    const filtered = comparisonResults.filter(item => {
+      // 1. Filter pill
+      if (currentInvFilter === 'diff' && item.statusType === 'match') return false;
+      if (currentInvFilter === 'diff_qty' && item.statusType !== 'diff_qty') return false;
+      if (currentInvFilter === 'only_kdb' && item.statusType !== 'only_kdb') return false;
+      if (currentInvFilter === 'only_hw' && item.statusType !== 'only_hw') return false;
+      if (currentInvFilter === 'match' && item.statusType !== 'match') return false;
+
+      // 2. Query search
+      if (query) {
+        return (
+          item.code.toLowerCase().includes(query) ||
+          item.sku.toLowerCase().includes(query) ||
+          item.name.toLowerCase().includes(query)
+        );
+      }
+      return true;
+    });
+
+    if (filtered.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 8;
+      td.style.textAlign = 'center';
+      td.style.padding = '2.5rem';
+      td.textContent = 'Không có SKU nào phù hợp với bộ lọc hiển thị.';
+      tr.appendChild(td);
+      invTableBody.appendChild(tr);
+      invRowCount.textContent = '0 dòng hiển thị';
+      return;
+    }
+
+    filtered.forEach((item, index) => {
+      const tr = document.createElement('tr');
+
+      // STT
+      const tdIdx = document.createElement('td');
+      tdIdx.textContent = index + 1;
+      tdIdx.style.textAlign = 'center';
+      tdIdx.style.color = '#94a3b8';
+
+      // SKU
+      const tdSku = document.createElement('td');
+      tdSku.textContent = item.sku || '-';
+      tdSku.style.fontFamily = 'monospace';
+      tdSku.style.fontWeight = '600';
+
+      // Mã Hàng / Barcode
+      const tdCode = document.createElement('td');
+      tdCode.textContent = item.code;
+      tdCode.style.fontFamily = 'monospace';
+      tdCode.style.fontWeight = '600';
+      tdCode.style.color = '#1e3a8a';
+
+      // Tên sản phẩm
+      const tdName = document.createElement('td');
+      tdName.textContent = item.name;
+
+      // Tồn KDB
+      const tdKDB = document.createElement('td');
+      tdKDB.textContent = formatNumber(item.qKDB);
+      tdKDB.style.fontWeight = '600';
+      tdKDB.style.textAlign = 'right';
+
+      // Tồn HW
+      const tdHW = document.createElement('td');
+      tdHW.textContent = formatNumber(item.qHW);
+      tdHW.style.fontWeight = '600';
+      tdHW.style.textAlign = 'right';
+
+      // Chênh lệch
+      const tdDiff = document.createElement('td');
+      tdDiff.style.textAlign = 'right';
+      const spanDiff = document.createElement('span');
+      spanDiff.className = 'diff-val';
+      if (item.diff > 0) {
+        spanDiff.className += ' positive';
+        spanDiff.textContent = `+${formatNumber(item.diff)}`;
+      } else if (item.diff < 0) {
+        spanDiff.className += ' negative';
+        spanDiff.textContent = formatNumber(item.diff);
+      } else {
+        spanDiff.className += ' zero';
+        spanDiff.textContent = '0';
+      }
+      tdDiff.appendChild(spanDiff);
+
+      // Trạng thái badge
+      const tdStatus = document.createElement('td');
+      tdStatus.style.textAlign = 'center';
+      const badge = document.createElement('span');
+      badge.className = `badge-status ${item.statusType.replace('_', '-')}`;
+      badge.textContent = item.status;
+      tdStatus.appendChild(badge);
+
+      tr.appendChild(tdIdx);
+      tr.appendChild(tdSku);
+      tr.appendChild(tdCode);
+      tr.appendChild(tdName);
+      tr.appendChild(tdKDB);
+      tr.appendChild(tdHW);
+      tr.appendChild(tdDiff);
+      tr.appendChild(tdStatus);
+
+      invTableBody.appendChild(tr);
+    });
+
+    invRowCount.textContent = `Hiển thị ${filtered.length} / ${comparisonResults.length} SKU`;
+  }
+
+  // Reset Inventory
+  btnResetInventory.addEventListener('click', () => {
+    hwBuffer = null;
+    kdbBuffer = null;
+    nameFileHW = '';
+    nameFileKDB = '';
+    comparisonResults = [];
+
+    dropZoneHW.classList.remove('has-file');
+    dropZoneKDB.classList.remove('has-file');
+    statusHW.innerHTML = '<span class="status-badge waiting">Chưa tải file</span>';
+    statusKDB.innerHTML = '<span class="status-badge waiting">Chưa tải file</span>';
+    fileNameHW.textContent = 'Kéo thả file Tồn Honeywell vào đây';
+    fileNameKDB.textContent = 'Kéo thả file Tồn KDB vào đây';
+    btnCompareInventory.disabled = true;
+
+    invStatsSection.style.display = 'none';
+    invResultCard.style.display = 'none';
+
+    showToast('Đã làm mới dữ liệu đối soát tồn kho!', 'info');
+  });
+
+  // Export Inventory Discrepancy Report to Excel
+  btnDownloadInventoryReport.addEventListener('click', async () => {
+    if (comparisonResults.length === 0) {
+      showToast('Chưa có dữ liệu đối soát để xuất!', 'error');
+      return;
+    }
+
+    try {
+      btnDownloadInventoryReport.disabled = true;
+      btnDownloadInventoryReport.textContent = 'Đang tạo báo cáo...';
+
+      const outWb = new ExcelJS.Workbook();
+      const ws = outWb.addWorksheet('Báo Cáo Lệch Tồn');
+
+      // Setup Headers
+      ws.columns = [
+        { header: 'STT', key: 'idx', width: 8 },
+        { header: 'Mã SKU (HW)', key: 'sku', width: 16 },
+        { header: 'Mã Hàng / Barcode', key: 'code', width: 20 },
+        { header: 'Tên Sản Phẩm', key: 'name', width: 45 },
+        { header: 'Tồn KDB', key: 'qKDB', width: 14 },
+        { header: 'Tồn Honeywell (Total Qty)', key: 'qHW', width: 22 },
+        { header: 'Chênh Lệch (HW - KDB)', key: 'diff', width: 20 },
+        { header: 'Trạng Thái', key: 'status', width: 20 }
+      ];
+
+      // Style Header Row
+      const headerRow = ws.getRow(1);
+      headerRow.height = 26;
+      headerRow.eachCell((cell) => {
+        cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        cell.fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FF1E3A8A' }
+        };
+        cell.alignment = { vertical: 'middle', horizontal: 'center' };
+      });
+
+      // Add Data Rows
+      comparisonResults.forEach((item, index) => {
+        const row = ws.addRow({
+          idx: index + 1,
+          sku: item.sku,
+          code: item.code,
+          name: item.name,
+          qKDB: item.qKDB,
+          qHW: item.qHW,
+          diff: item.diff,
+          status: item.status
+        });
+
+        row.getCell(1).alignment = { horizontal: 'center' };
+        row.getCell(2).alignment = { horizontal: 'center' };
+        row.getCell(3).alignment = { horizontal: 'center' };
+        row.getCell(5).numFmt = '#,##0';
+        row.getCell(6).numFmt = '#,##0';
+        row.getCell(7).numFmt = '#,##0';
+        row.getCell(8).alignment = { horizontal: 'center' };
+
+        // Color coding status
+        if (item.statusType === 'diff_qty') {
+          row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+          row.getCell(8).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEE2E2' } };
+        } else if (item.statusType === 'only_kdb') {
+          row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+          row.getCell(8).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFEF3C7' } };
+        } else if (item.statusType === 'only_hw') {
+          row.getCell(7).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEDE9FE' } };
+          row.getCell(8).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEDE9FE' } };
+        } else {
+          row.getCell(8).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFECFDF5' } };
+        }
+      });
+
+      const outBuffer = await outWb.xlsx.writeBuffer();
+      const blob = new Blob([outBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+
+      const now = new Date();
+      const dateStamp = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+      const filename = `bao_cao_lech_ton_KDB_Honeywell_${dateStamp}.xlsx`;
+
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+
+      showToast(`Đã xuất báo cáo: ${filename}`, 'success');
+    } catch (err) {
+      console.error('Export report error:', err);
+      showToast('Lỗi khi xuất báo cáo: ' + err.message, 'error');
+    } finally {
+      btnDownloadInventoryReport.disabled = false;
+      btnDownloadInventoryReport.innerHTML = `
+        <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+        </svg>
+        Xuất Báo Cáo Lệch Tồn (.xlsx)
       `;
     }
   });

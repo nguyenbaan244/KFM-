@@ -3,10 +3,17 @@
 Ứng dụng web tĩnh và script Python giúp tự động chuyển đổi dữ liệu từ File PO (Purchase Order) sang biểu mẫu File Nhập Hàng theo định dạng chuẩn.
 
 ## Tính Năng Chính
-- **Xử lý trực tiếp trên trình duyệt (Web App):** Kéo thả file PO vào giao diện để xem trước bảng dữ liệu và tải về file Excel thành phẩm.
-- **Script dòng lệnh Python (`convert_po.py`):** Dành cho việc xử lý hàng loạt hoặc tự động hóa.
-- **Tự động lọc dòng không hợp lệ:** Loại bỏ các dòng có số lượng thực nhận (cột AD) <= 0.
-- **Sẵn sàng triển khai:** Có thể deploy ngay lên Vercel, Netlify hoặc GitHub Pages dưới dạng web tĩnh.
+1. **Tab 1 - Convert template KDB -> Honeywell:**
+   - Tự động chuyển đổi dữ liệu file PO (10 cột) sang file Nhập hàng chuẩn.
+   - Bỏ qua các dòng có số lượng thực nhận (cột AD) <= 0.
+   - Hỗ trợ tải dữ liệu mẫu, xem trước bảng dữ liệu và tải file Excel hoàn chỉnh.
+
+2. **Tab 2 - Check tồn KDB và Honeywell:**
+   - Đối soát số lượng tồn kho theo SKU giữa hệ thống Honeywell (`Total Quantity`) và KDB (`Tồn cuối kỳ`).
+   - Phân tích chi tiết các trạng thái: Khớp hoàn toàn, Lệch số lượng, Chỉ có ở KDB, Chỉ có ở Honeywell.
+   - Bộ lọc thông minh theo danh mục lệch và ô tìm kiếm nhanh theo SKU/Barcode.
+   - Xuất báo cáo đối soát chênh lệch chi tiết dạng Excel (.xlsx).
+   - Đi kèm script dòng lệnh `check_inventory.py` cho tự động hóa.
 
 ## Quy Tắc Ánh Xạ Dữ Liệu (10 Cột)
 | Cột Nhập Hàng | Tên Trường | Cột Nguồn PO | Ghi Chú |

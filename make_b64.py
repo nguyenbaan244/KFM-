@@ -14,4 +14,15 @@ po_b64 = base64.b64encode(po_data).decode('utf-8')
 with open('sample_po_b64.js', 'w', encoding='utf-8') as f:
     f.write(f'var SAMPLE_PO_BASE64 = "{po_b64}";\nif (typeof module !== "undefined" && module.exports) {{ module.exports = SAMPLE_PO_BASE64; }}\n')
 
-print('Updated template_b64.js and sample_po_b64.js successfully!')
+with open('Tồn Honeywell.xlsx', 'rb') as f:
+    hw_data = f.read()
+hw_b64 = base64.b64encode(hw_data).decode('utf-8')
+
+with open('Tồn KDB.xlsx', 'rb') as f:
+    kdb_data = f.read()
+kdb_b64 = base64.b64encode(kdb_data).decode('utf-8')
+
+with open('sample_inventory_b64.js', 'w', encoding='utf-8') as f:
+    f.write(f'var SAMPLE_HW_BASE64 = "{hw_b64}";\nvar SAMPLE_KDB_BASE64 = "{kdb_b64}";\n')
+
+print('Generated all base64 files successfully!')
