@@ -20,10 +20,14 @@
    - Báo cáo SKU ở vị trí chuẩn, chưa vào chuẩn, hoặc không có vị trí.
    - Script dòng lệnh: `check_honeywell_location.py`.
 
-4. **Tab 4 - Convert đơn hàng KDB -> Honeywell (Tạo Order):**
+4. **Tab 4 - Convert đơn hàng KDB -> Honeywell (Tạo Order & Sắp xếp vị trí kho):**
    - Chuyển đổi dữ liệu yêu cầu chuyển hàng từ KDB sang file Excel tạo order Honeywell 21 cột chuẩn.
-   - Quy tắc:
-     - `Mã đơn gốc`: `[Nơi nhận (viết tắt)]` + `_` + `ddmmyyyy` ngày hiện tại (ví dụ `B001` &rarr; `B001_10102026`).
+   - **Tính năng nâng cấp mới:**
+     - **Tách mỗi 50 dòng thành 1 order riêng:** Tự động gắn hậu tố `-1`, `-2`, `-3`... vào mã đơn gốc (ví dụ: `B001_10102026-1`, `B001_10102026-2`...).
+     - **Sắp xếp theo vị trí kho A1 &rarr; A9 và B1 &rarr; B8:** Nạp file `Inventory Balance.xlsx` để định tuyến thứ tự pick hàng theo từng dãy liền kề, giúp nhân viên không phải đi lòng vòng kho.
+     - **Bộ lọc & xem trước từng order:** Giao diện Web hỗ trợ lọc xem riêng từng đơn hoặc toàn bộ, hiển thị cột vị trí kho chi tiết.
+   - Quy tắc ánh xạ 21 cột:
+     - `Mã đơn gốc`: `[Nơi nhận (viết tắt)]` + `_` + `ddmmyyyy` + `-` + `order_index` (ví dụ `B001` &rarr; `B001_10102026-1`).
      - `Gói dịch vụ`: `B2C3D`.
      - `Tên người nhận`: `[Nơi nhận (viết tắt)]` - Cột N (ví dụ `B001`).
      - `Số điện thoại`: `0973468464` (Text).
@@ -36,6 +40,7 @@
      - `Mã Cửa Hàng (Cột U)`: `[Nơi nhận (viết tắt)]` - Cột N (ví dụ `B001`).
      - Các trường còn lại (6, 7, 8, 12, 18, 20) để trống.
    - Đi kèm script dòng lệnh: `convert_kdb_to_honeywell.py`.
+
 
 5. **Tab 5 - Convert template Honeywell -> KDB (Tạo Phiếu Chuyển):**
    - Chuyển đổi dữ liệu Outbound Honeywell sang file Excel Phiếu Chuyển KDB (Template PT KDB 6 cột chuẩn).

@@ -41,11 +41,20 @@ if os.path.exists(sample_order_path):
 else:
     sample_order_b64 = ""
 
+if os.path.exists('Inventory Balance.xlsx'):
+    with open('Inventory Balance.xlsx', 'rb') as f:
+        inv_balance_b64 = base64.b64encode(f.read()).decode('utf-8')
+else:
+    inv_balance_b64 = ""
+
 with open('sample_order_b64.js', 'w', encoding='utf-8') as f:
     f.write(f'var TEMPLATE_ORDER_HW_BASE64 = "{tpl_order_b64}";\n')
     f.write('if (typeof module !== "undefined" && module.exports) { module.exports.TEMPLATE_ORDER_HW_BASE64 = TEMPLATE_ORDER_HW_BASE64; }\n\n')
     f.write(f'var SAMPLE_TRANSFER_KDB_BASE64 = "{sample_order_b64}";\n')
-    f.write('if (typeof module !== "undefined" && module.exports) { module.exports.SAMPLE_TRANSFER_KDB_BASE64 = SAMPLE_TRANSFER_KDB_BASE64; }\n')
+    f.write('if (typeof module !== "undefined" && module.exports) { module.exports.SAMPLE_TRANSFER_KDB_BASE64 = SAMPLE_TRANSFER_KDB_BASE64; }\n\n')
+    f.write(f'var SAMPLE_INVENTORY_BALANCE_BASE64 = "{inv_balance_b64}";\n')
+    f.write('if (typeof module !== "undefined" && module.exports) { module.exports.SAMPLE_INVENTORY_BALANCE_BASE64 = SAMPLE_INVENTORY_BALANCE_BASE64; }\n')
 
 print('Generated all base64 files successfully!')
+
 

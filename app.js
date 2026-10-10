@@ -1817,8 +1817,19 @@
   const orderDropZone = document.getElementById('orderDropZone');
   const orderFileInput = document.getElementById('orderFileInput');
   const btnSelectOrderFile = document.getElementById('btnSelectOrderFile');
+  const orderFileStatus = document.getElementById('orderFileStatus');
+  const orderFileNameDisplay = document.getElementById('orderFileNameDisplay');
+
+  const orderInvDropZone = document.getElementById('orderInvDropZone');
+  const orderInvFileInput = document.getElementById('orderInvFileInput');
+  const btnSelectOrderInvFile = document.getElementById('btnSelectOrderInvFile');
+  const orderInvFileStatus = document.getElementById('orderInvFileStatus');
+  const orderInvFileNameDisplay = document.getElementById('orderInvFileNameDisplay');
+
   const btnLoadDemoOrder = document.getElementById('btnLoadDemoOrder');
 
+  const orderInputSplitSize = document.getElementById('orderInputSplitSize');
+  const orderCheckboxSortLoc = document.getElementById('orderCheckboxSortLoc');
   const orderInputPhone = document.getElementById('orderInputPhone');
   const orderInputService = document.getElementById('orderInputService');
   const orderInputSuffix = document.getElementById('orderInputSuffix');
@@ -1826,24 +1837,31 @@
 
   const orderStatsSection = document.getElementById('orderStatsSection');
   const statOrderTotalRows = document.getElementById('statOrderTotalRows');
-  const statOrderCode = document.getElementById('statOrderCode');
+  const statOrderSplitCount = document.getElementById('statOrderSplitCount');
+  const statOrderLocRange = document.getElementById('statOrderLocRange');
   const statOrderDest = document.getElementById('statOrderDest');
   const statOrderTotalQty = document.getElementById('statOrderTotalQty');
 
   const orderTableSection = document.getElementById('orderTableSection');
   const orderTableToolbar = document.getElementById('orderTableToolbar');
   const orderSearchInput = document.getElementById('orderSearchInput');
+  const orderFilterSelect = document.getElementById('orderFilterSelect');
   const orderTableRowCount = document.getElementById('orderTableRowCount');
   const orderTableBody = document.getElementById('orderTableBody');
   const btnDownloadOrder = document.getElementById('btnDownloadOrder');
   const btnResetOrder = document.getElementById('btnResetOrder');
   const orderPreviewSubtitle = document.getElementById('orderPreviewSubtitle');
 
+  let rawKdbBuffer = null;
+  let rawKdbFileName = '';
+  let rawInvBuffer = null;
+  let rawInvFileName = '';
+  let inventoryLocationMap = new Map();
   let convertedOrderRows = [];
+  let orderSummaries = [];
   let orderUniqueCodes = new Set();
   let orderDestinations = new Set();
   let orderTotalQty = 0;
-  let orderSourceFileName = '';
 
   function getTodayOrderSuffix() {
     const now = new Date();
@@ -1855,6 +1873,100 @@
 
   if (orderInputSuffix) {
     orderInputSuffix.value = getTodayOrderSuffix();
+  }
+
+  function parseLocationKey(locStr) {
+    if (!locStr) return [99, 99, 9999, 'Z', ''];
+    const clean = String(locStr).trim();
+    const m = clean.match(/^([A-Za-z])(\d+)(?:-(\d+))?(?:-([A-Za-z0-9]+))?/);
+    if (m) {
+      const letter = m[1].toUpperCase();
+      const aisleNum = parseInt(m[2], 10) || 0;
+      const bayNum = m[3] ? parseInt(m[3], 10) : 0;
+      const tier = (m[4] || '').toUpperCase();
+      const prio = letter === 'A' ? 1 : (letter === 'B' ? 2 : 3);
+      return [prio, aisleNum, bayNum, tier, clean];
+    }
+    return [5, 99, 9999, 'Z', clean];
+  }
+
+  function compareLocations(locA, locB) {
+    const kA = parseLocationKey(locA);
+    const kB = parseLocationKey(locB);
+    for (let i = 0; i < 4; i++) {
+      if (kA[i] < kB[i]) return -1;
+      if (kA[i] > kB[i]) return 1;
+    }
+    return String(kA[4]).localeCompare(String(kB[4]));
+  }
+
+  async function parseInventoryBalance(arrayBuffer, fileName) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(arrayBuffer);
+    const ws = wb.worksheets[0];
+    if (!ws) throw new Error('File Inventory không có sheet hợp lệ.');
+
+    let skuCol = -1, mcodeCol = -1, scodeCol = -1, locCol = -1, qtyCol = -1;
+    const headerRow = ws.getRow(1);
+    headerRow.eachCell((cell, colNumber) => {
+      const raw = String(cell.value || '').trim().toLowerCase();
+      if (raw === 'sku' || raw === 'mã sku' || raw === 'ma sku') skuCol = colNumber;
+      else if (raw === 'mcode' || raw === 'm-code' || raw === 'barcode' || raw === 'mã barcode' || raw === 'mã vạch') mcodeCol = colNumber;
+      else if (raw === 'scode' || raw === 's-code') scodeCol = colNumber;
+      else if (raw === 'location id' || raw === 'location' || raw === 'vị trí' || raw === 'vi tri' || raw === 'mã vị trí') locCol = colNumber;
+      else if (raw === 'qty available' || raw === 'available qty' || raw === 'sl khả dụng' || raw === 'ton kha dung') qtyCol = colNumber;
+      else if ((raw === 'total quantity' || raw === 'total qty' || raw === 'tổng tồn') && qtyCol === -1) qtyCol = colNumber;
+    });
+
+    if (skuCol === -1) skuCol = 3;
+    if (mcodeCol === -1) mcodeCol = 4;
+    if (locCol === -1) locCol = 9;
+    if (qtyCol === -1) qtyCol = 15;
+
+    const recordMap = new Map();
+    for (let r = 2; r <= ws.rowCount; r++) {
+      const row = ws.getRow(r);
+      const sku = String(row.getCell(skuCol).value || '').trim();
+      const mcode = String(row.getCell(mcodeCol).value || '').trim();
+      const scode = scodeCol !== -1 ? String(row.getCell(scodeCol).value || '').trim() : '';
+      const loc = String(row.getCell(locCol).value || '').trim();
+      const qtyVal = Number(row.getCell(qtyCol).value) || 0;
+
+      if (!loc) continue;
+
+      const addOrUpdate = (key) => {
+        if (!key) return;
+        if (!recordMap.has(key)) {
+          recordMap.set(key, { loc, qty: qtyVal });
+        } else {
+          const cur = recordMap.get(key);
+          if (qtyVal > cur.qty) {
+            recordMap.set(key, { loc, qty: qtyVal });
+          }
+        }
+      };
+
+      addOrUpdate(mcode);
+      addOrUpdate(sku);
+      addOrUpdate(scode);
+    }
+
+    inventoryLocationMap.clear();
+    recordMap.forEach((val, key) => {
+      inventoryLocationMap.set(key, val.loc);
+    });
+
+    rawInvBuffer = arrayBuffer;
+    rawInvFileName = fileName;
+
+    if (orderInvDropZone) orderInvDropZone.classList.add('has-file');
+    if (orderInvFileStatus) {
+      orderInvFileStatus.innerHTML = `
+        <span class="status-badge ready">Đã sẵn sàng</span>
+        <p class="file-name" style="color:#059669; font-weight:600;">${fileName} (${formatNumber(inventoryLocationMap.size)} mã SKU/vị trí)</p>
+      `;
+    }
+    return inventoryLocationMap.size;
   }
 
   function findTransferColumns(ws) {
@@ -1911,11 +2023,26 @@
       tdStt.textContent = item.stt;
       tr.appendChild(tdStt);
 
+      // Cột A: Mã đơn gốc (có badge order -1, -2...)
       const tdOrder = document.createElement('td');
-      const strongOrder = document.createElement('strong');
-      strongOrder.textContent = item.orderCode;
-      tdOrder.appendChild(strongOrder);
+      const spanOrder = document.createElement('span');
+      spanOrder.className = 'badge-order';
+      spanOrder.textContent = item.orderCode;
+      tdOrder.appendChild(spanOrder);
       tr.appendChild(tdOrder);
+
+      // Cột Vị trí kho (Location)
+      const tdLoc = document.createElement('td');
+      const spanLoc = document.createElement('span');
+      if (item.location) {
+        spanLoc.className = 'badge-location';
+        spanLoc.textContent = item.location;
+      } else {
+        spanLoc.className = 'badge-location empty';
+        spanLoc.textContent = 'Chưa có';
+      }
+      tdLoc.appendChild(spanLoc);
+      tr.appendChild(tdLoc);
 
       const tdService = document.createElement('td');
       tdService.textContent = item.serviceType;
@@ -1996,7 +2123,7 @@
     if (rows.length > 500) {
       const trMore = document.createElement('tr');
       const tdMore = document.createElement('td');
-      tdMore.colSpan = 16;
+      tdMore.colSpan = 17;
       tdMore.style.textAlign = 'center';
       tdMore.style.color = '#64748b';
       tdMore.style.fontStyle = 'italic';
@@ -2007,25 +2134,45 @@
     }
   }
 
-  async function parseTransferData(arrayBuffer, fileName) {
+  function filterAndRenderOrderTable() {
+    let list = convertedOrderRows;
+    const selectedOrder = orderFilterSelect ? orderFilterSelect.value : 'ALL';
+    if (selectedOrder && selectedOrder !== 'ALL') {
+      list = list.filter(item => item.orderCode === selectedOrder);
+    }
+    const query = orderSearchInput ? orderSearchInput.value.trim().toLowerCase() : '';
+    if (query) {
+      list = list.filter(item =>
+        item.barcode.toLowerCase().includes(query) ||
+        item.productName.toLowerCase().includes(query) ||
+        item.orderCode.toLowerCase().includes(query) ||
+        item.location.toLowerCase().includes(query) ||
+        item.destFull.toLowerCase().includes(query)
+      );
+    }
+    renderOrderTable(list);
+  }
+
+  async function processAndConvertOrders() {
+    if (!rawKdbBuffer) return;
+
     const wb = new ExcelJS.Workbook();
-    await wb.xlsx.load(arrayBuffer);
+    await wb.xlsx.load(rawKdbBuffer);
     const ws = wb.worksheets[0];
-    if (!ws) throw new Error('File Excel không có sheet nào hợp lệ.');
+    if (!ws) throw new Error('File Excel KDB không có sheet nào hợp lệ.');
 
     const colMap = findTransferColumns(ws);
-
-    convertedOrderRows = [];
-    orderUniqueCodes = new Set();
-    orderDestinations = new Set();
-    orderTotalQty = 0;
-    orderSourceFileName = fileName || 'yeu_cau_chuyen_hang.xlsx';
-    let skippedZero = 0;
 
     const phone = (orderInputPhone ? orderInputPhone.value.trim() : '') || '0973468464';
     const serviceType = (orderInputService ? orderInputService.value.trim() : '') || 'B2C3D';
     const defaultSuffix = getTodayOrderSuffix();
     const suffix = (orderInputSuffix ? orderInputSuffix.value.trim() : '') || defaultSuffix;
+    const splitSize = orderInputSplitSize ? (parseInt(orderInputSplitSize.value, 10) || 50) : 50;
+    const isSortLoc = orderCheckboxSortLoc ? orderCheckboxSortLoc.checked : true;
+
+    const rawItems = [];
+    let skippedZero = 0;
+    let totalQty = 0;
 
     for (let r = 2; r <= ws.rowCount; r++) {
       const row = ws.getRow(r);
@@ -2054,45 +2201,121 @@
       const productNameStr = productNameVal != null ? String(productNameVal).trim() : '';
       const destShortStr = destShortVal != null ? String(destShortVal).trim() : '';
       const destFullStr = destFullVal != null ? String(destFullVal).trim() : '';
+      const locStr = inventoryLocationMap.get(barcodeStr) || '';
 
-      const orderCode = destShortStr ? `${destShortStr}${suffix}` : `ORDER${suffix}`;
-      orderUniqueCodes.add(orderCode);
-      if (destFullStr) orderDestinations.add(destFullStr);
-      orderTotalQty += qty;
+      totalQty += qty;
 
-      convertedOrderRows.push({
-        stt: convertedOrderRows.length + 1,
-        orderCode: orderCode,
-        destShort: destShortStr,
-        serviceType: serviceType,
-        receiverName: destShortStr, // Tên người nhận = nơi nhận (viết tắt) - cột N
-        destFull: destFullStr,
-        phone: phone,
-        address: destFullStr,       // Địa chỉ = nơi nhận - cột O
-        ward: '',
-        district: '',
-        province: '',
-        barcode: barcodeStr,
-        qty: qty,
-        transporter: 'GHN',
-        shippingCode: '',
-        shippingRate: 2,
-        cod: 0,
-        orderReq: 1,
-        paymentType: 2,
-        productName: productNameStr,
+      rawItems.push({
         reqCode: reqCodeStr,
-        linkBill: reqCodeStr,       // Cột S (Link bill sàn TMĐT) = Mã yêu cầu (cột B)
-        storeCode: destShortStr     // Cột U (Mã Cửa Hàng) = Nơi nhận viết tắt (cột N)
+        barcode: barcodeStr,
+        productName: productNameStr,
+        destShort: destShortStr,
+        destFull: destFullStr,
+        qty: qty,
+        location: locStr,
+        phone: phone,
+        serviceType: serviceType
       });
     }
 
-    if (convertedOrderRows.length === 0) {
+    if (rawItems.length === 0) {
       throw new Error('Không tìm thấy dòng dữ liệu hợp lệ (SL chuyển > 0) trong file KDB.');
     }
 
+    // 1. Sắp xếp thứ tự theo vị trí kho: A1 -> A9 và B1 -> B8
+    if (isSortLoc && inventoryLocationMap.size > 0) {
+      rawItems.sort((a, b) => {
+        if (a.destShort !== b.destShort) return a.destShort.localeCompare(b.destShort);
+        return compareLocations(a.location, b.location);
+      });
+    } else {
+      rawItems.sort((a, b) => a.destShort.localeCompare(b.destShort));
+    }
+
+    // 2. Chia nhóm 50 dòng theo nơi nhận và gán orderCode có -1, -2, -3...
+    const destGroups = new Map();
+    rawItems.forEach(item => {
+      const d = item.destShort || 'ORDER';
+      if (!destGroups.has(d)) destGroups.set(d, []);
+      destGroups.get(d).push(item);
+    });
+
+    convertedOrderRows = [];
+    orderSummaries = [];
+    orderUniqueCodes = new Set();
+    orderDestinations = new Set();
+    orderTotalQty = totalQty;
+
+    let globalStt = 1;
+
+    destGroups.forEach((itemsInDest, dShort) => {
+      const basePrefix = `${dShort}${suffix}`;
+      const destFullName = itemsInDest[0].destFull || '';
+      if (destFullName) orderDestinations.add(destFullName);
+
+      const numOrders = Math.ceil(itemsInDest.length / splitSize);
+
+      for (let oIdx = 0; oIdx < numOrders; oIdx++) {
+        const chunk = itemsInDest.slice(oIdx * splitSize, (oIdx + 1) * splitSize);
+        const orderCode = `${basePrefix}-${oIdx + 1}`;
+        orderUniqueCodes.add(orderCode);
+
+        const firstLoc = chunk[0].location || 'N/A';
+        const lastLoc = chunk[chunk.length - 1].location || 'N/A';
+        const hasLoc = chunk.some(it => it.location);
+        const chunkQty = chunk.reduce((sum, it) => sum + it.qty, 0);
+
+        orderSummaries.push({
+          orderCode: orderCode,
+          destShort: dShort,
+          destFull: destFullName,
+          lines: chunk.length,
+          qty: chunkQty,
+          locRange: hasLoc ? `${firstLoc} → ${lastLoc}` : 'Chưa có vị trí'
+        });
+
+        chunk.forEach(it => {
+          convertedOrderRows.push({
+            stt: globalStt++,
+            orderCode: orderCode,
+            orderGroup: oIdx + 1,
+            destShort: it.destShort,
+            serviceType: it.serviceType,
+            receiverName: it.destShort,
+            destFull: it.destFull,
+            phone: it.phone,
+            address: it.destFull,
+            barcode: it.barcode,
+            qty: it.qty,
+            location: it.location,
+            transporter: 'GHN',
+            shippingCode: '',
+            shippingRate: 2,
+            cod: 0,
+            orderReq: 1,
+            paymentType: 2,
+            productName: it.productName,
+            reqCode: it.reqCode,
+            linkBill: it.reqCode,
+            storeCode: it.destShort
+          });
+        });
+      }
+    });
+
+    // Cập nhật thống kê
     if (statOrderTotalRows) statOrderTotalRows.textContent = formatNumber(convertedOrderRows.length);
-    if (statOrderCode) statOrderCode.textContent = Array.from(orderUniqueCodes).join(', ') || '-';
+    if (statOrderSplitCount) statOrderSplitCount.textContent = `${orderSummaries.length} đơn (-1 → -${orderSummaries.length})`;
+    
+    // Tìm dải vị trí bao phủ toàn bộ
+    const allLocations = convertedOrderRows.filter(r => r.location).map(r => r.location);
+    if (statOrderLocRange) {
+      if (allLocations.length > 0) {
+        statOrderLocRange.textContent = `${allLocations[0]} → ${allLocations[allLocations.length - 1]}`;
+      } else {
+        statOrderLocRange.textContent = 'Chưa có vị trí';
+      }
+    }
     if (statOrderDest) statOrderDest.textContent = Array.from(orderDestinations).join(', ') || '-';
     if (statOrderTotalQty) statOrderTotalQty.textContent = formatNumber(orderTotalQty);
 
@@ -2102,17 +2325,32 @@
     if (btnDownloadOrder) btnDownloadOrder.disabled = false;
 
     if (orderPreviewSubtitle) {
-      orderPreviewSubtitle.textContent = `File nguồn: ${fileName} | Đã tải ${convertedOrderRows.length} dòng (Đã lọc bỏ ${skippedZero} dòng SL <= 0)`;
+      const invNote = inventoryLocationMap.size > 0 
+        ? `Đã sắp xếp vị trí kho dãy A1-A9, B1-B8 (${allLocations.length}/${convertedOrderRows.length} dòng có vị trí)`
+        : 'Chưa tải file Inventory (gợi ý tải file để gom theo dãy A1-A9, B1-B8)';
+      orderPreviewSubtitle.textContent = `File nguồn: ${rawKdbFileName} | Đã tách thành ${orderSummaries.length} đơn (mỗi ${splitSize} dòng) | ${invNote}`;
     }
 
-    const firstOrder = Array.from(orderUniqueCodes)[0] || 'ORDER';
+    const firstOrder = Array.from(orderUniqueCodes)[0] ? Array.from(orderUniqueCodes)[0].split('-')[0] : 'ORDER';
     const now = new Date();
     const dateStamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
     if (orderInputFilename) {
       orderInputFilename.placeholder = `order_honeywell_${firstOrder}_${dateStamp}.xlsx`;
     }
 
-    renderOrderTable(convertedOrderRows);
+    // Cập nhật bộ lọc theo Order
+    if (orderFilterSelect) {
+      orderFilterSelect.innerHTML = `<option value="ALL">Tất cả các đơn (${orderSummaries.length} đơn - ${formatNumber(convertedOrderRows.length)} dòng)</option>`;
+      orderSummaries.forEach(sm => {
+        const opt = document.createElement('option');
+        opt.value = sm.orderCode;
+        opt.textContent = `${sm.orderCode} (${sm.lines} dòng | Vị trí: ${sm.locRange})`;
+        orderFilterSelect.appendChild(opt);
+      });
+      orderFilterSelect.value = 'ALL';
+    }
+
+    filterAndRenderOrderTable();
   }
 
   async function handleOrderIncomingFile(file) {
@@ -2126,15 +2364,50 @@
     }
 
     try {
-      const arrayBuffer = await file.arrayBuffer();
-      await parseTransferData(arrayBuffer, file.name);
-      showToast(`Đã tải thành công ${file.name}!`, 'success');
+      rawKdbBuffer = await file.arrayBuffer();
+      rawKdbFileName = file.name;
+
+      if (orderDropZone) orderDropZone.classList.add('has-file');
+      if (orderFileStatus) {
+        orderFileStatus.innerHTML = `
+          <span class="status-badge ready">Đã sẵn sàng</span>
+          <p class="file-name" style="color:#2563eb; font-weight:600;">${file.name}</p>
+        `;
+      }
+
+      await processAndConvertOrders();
+      showToast(`Đã tải thành công file KDB: ${file.name}!`, 'success');
     } catch (err) {
       console.error(err);
       showToast('Lỗi khi đọc file KDB: ' + err.message, 'error');
     }
   }
 
+  async function handleOrderInvIncomingFile(file) {
+    const validExtensions = ['.xlsx', '.xls'];
+    const fileName = file.name.toLowerCase();
+    const isValid = validExtensions.some(ext => fileName.endsWith(ext));
+
+    if (!isValid) {
+      showToast('Vui lòng chỉ tải lên file Excel (.xlsx hoặc .xls)!', 'error');
+      return;
+    }
+
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const count = await parseInventoryBalance(arrayBuffer, file.name);
+      showToast(`Đã nạp file Inventory Balance: ${count} mã vị trí!`, 'success');
+
+      if (rawKdbBuffer) {
+        await processAndConvertOrders();
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Lỗi khi đọc file Inventory: ' + err.message, 'error');
+    }
+  }
+
+  // Dropzone KDB
   if (orderDropZone) {
     ['dragenter', 'dragover'].forEach(eventName => {
       orderDropZone.addEventListener(eventName, (e) => {
@@ -2161,7 +2434,7 @@
     });
 
     orderDropZone.addEventListener('click', (e) => {
-      if (e.target.closest('#btnLoadDemoOrder')) return;
+      if (e.target.closest('#btnSelectOrderFile')) return;
       if (orderFileInput) orderFileInput.click();
     });
   }
@@ -2179,14 +2452,76 @@
     });
   }
 
+  // Dropzone Inventory
+  if (orderInvDropZone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      orderInvDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        orderInvDropZone.classList.add('dragover');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      orderInvDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        orderInvDropZone.classList.remove('dragover');
+      });
+    });
+
+    orderInvDropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      if (files && files.length > 0) {
+        handleOrderInvIncomingFile(files[0]);
+      }
+    });
+
+    orderInvDropZone.addEventListener('click', (e) => {
+      if (e.target.closest('#btnSelectOrderInvFile')) return;
+      if (orderInvFileInput) orderInvFileInput.click();
+    });
+  }
+
+  if (btnSelectOrderInvFile && orderInvFileInput) {
+    btnSelectOrderInvFile.addEventListener('click', (e) => {
+      e.stopPropagation();
+      orderInvFileInput.click();
+    });
+
+    orderInvFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        handleOrderInvIncomingFile(e.target.files[0]);
+      }
+    });
+  }
+
+  // Load Demo Data (Cả KDB và Inventory Balance)
   if (btnLoadDemoOrder) {
     btnLoadDemoOrder.addEventListener('click', async (e) => {
       e.stopPropagation();
       try {
+        let loadedInv = false;
+        if (typeof SAMPLE_INVENTORY_BALANCE_BASE64 !== 'undefined' && SAMPLE_INVENTORY_BALANCE_BASE64) {
+          const invBuf = base64ToArrayBuffer(SAMPLE_INVENTORY_BALANCE_BASE64);
+          await parseInventoryBalance(invBuf, 'Inventory Balance.xlsx');
+          loadedInv = true;
+        }
+
         if (typeof SAMPLE_TRANSFER_KDB_BASE64 !== 'undefined' && SAMPLE_TRANSFER_KDB_BASE64) {
-          const buf = base64ToArrayBuffer(SAMPLE_TRANSFER_KDB_BASE64);
-          await parseTransferData(buf, 'yeu_cau_chuyen_hang_thuong_10102026-094746.xlsx');
-          showToast('Đã nạp file yêu cầu chuyển hàng KDB mẫu có sẵn!', 'success');
+          const kdbBuf = base64ToArrayBuffer(SAMPLE_TRANSFER_KDB_BASE64);
+          rawKdbBuffer = kdbBuf;
+          rawKdbFileName = 'yeu_cau_chuyen_hang_thuong_10102026-094746.xlsx';
+          if (orderDropZone) orderDropZone.classList.add('has-file');
+          if (orderFileStatus) {
+            orderFileStatus.innerHTML = `
+              <span class="status-badge ready">Đã sẵn sàng</span>
+              <p class="file-name" style="color:#2563eb; font-weight:600;">${rawKdbFileName}</p>
+            `;
+          }
+          await processAndConvertOrders();
+          showToast(`Đã nạp thành công file KDB mẫu ${loadedInv ? 'và file Inventory Balance mẫu' : ''}!`, 'success');
         } else {
           showToast('Không tìm thấy dữ liệu mẫu cục bộ cho chuyển hàng KDB.', 'error');
         }
@@ -2197,37 +2532,81 @@
     });
   }
 
+  // Thay đổi cài đặt tự động tính toán lại
+  if (orderInputSplitSize) {
+    orderInputSplitSize.addEventListener('input', () => {
+      if (rawKdbBuffer) processAndConvertOrders();
+    });
+  }
+
+  if (orderCheckboxSortLoc) {
+    orderCheckboxSortLoc.addEventListener('change', () => {
+      if (rawKdbBuffer) processAndConvertOrders();
+    });
+  }
+
+  if (orderInputSuffix) {
+    orderInputSuffix.addEventListener('input', () => {
+      if (rawKdbBuffer) processAndConvertOrders();
+    });
+  }
+
+  // Tìm kiếm & Lọc
   if (orderSearchInput) {
-    orderSearchInput.addEventListener('input', (e) => {
-      const query = e.target.value.trim().toLowerCase();
-      if (!query) {
-        renderOrderTable(convertedOrderRows);
-        return;
-      }
-      const filtered = convertedOrderRows.filter(item =>
-        item.barcode.toLowerCase().includes(query) ||
-        item.productName.toLowerCase().includes(query) ||
-        item.orderCode.toLowerCase().includes(query) ||
-        item.destFull.toLowerCase().includes(query)
-      );
-      renderOrderTable(filtered);
+    orderSearchInput.addEventListener('input', () => {
+      filterAndRenderOrderTable();
+    });
+  }
+
+  if (orderFilterSelect) {
+    orderFilterSelect.addEventListener('change', () => {
+      filterAndRenderOrderTable();
     });
   }
 
   if (btnResetOrder) {
     btnResetOrder.addEventListener('click', () => {
+      rawKdbBuffer = null;
+      rawKdbFileName = '';
+      rawInvBuffer = null;
+      rawInvFileName = '';
+      inventoryLocationMap.clear();
       convertedOrderRows = [];
+      orderSummaries = [];
       orderUniqueCodes.clear();
       orderDestinations.clear();
       orderTotalQty = 0;
+
       if (orderFileInput) orderFileInput.value = '';
+      if (orderInvFileInput) orderInvFileInput.value = '';
       if (orderSearchInput) orderSearchInput.value = '';
+
+      if (orderDropZone) orderDropZone.classList.remove('has-file');
+      if (orderFileStatus) {
+        orderFileStatus.innerHTML = `
+          <span class="status-badge waiting">Chưa tải file</span>
+          <p class="file-name" id="orderFileNameDisplay">Kéo thả file KDB vào đây</p>
+        `;
+      }
+
+      if (orderInvDropZone) orderInvDropZone.classList.remove('has-file');
+      if (orderInvFileStatus) {
+        orderInvFileStatus.innerHTML = `
+          <span class="status-badge waiting">Chưa tải file</span>
+          <p class="file-name" id="orderInvFileNameDisplay">Kéo thả file Inventory vào đây</p>
+        `;
+      }
+
       if (orderStatsSection) orderStatsSection.style.display = 'none';
       if (orderTableSection) orderTableSection.style.display = 'none';
       if (orderTableToolbar) orderTableToolbar.style.display = 'none';
       if (btnDownloadOrder) btnDownloadOrder.disabled = true;
       if (orderTableBody) orderTableBody.innerHTML = '';
       if (orderInputSuffix) orderInputSuffix.value = getTodayOrderSuffix();
+      if (orderInputSplitSize) orderInputSplitSize.value = '50';
+      if (orderCheckboxSortLoc) orderCheckboxSortLoc.checked = true;
+      if (orderFilterSelect) orderFilterSelect.innerHTML = '<option value="ALL">Tất cả các đơn</option>';
+
       showToast('Đã đặt lại dữ liệu tạo order.', 'info');
     });
   }
@@ -2265,16 +2644,12 @@
 
         const currentPhone = (orderInputPhone ? orderInputPhone.value.trim() : '') || '0973468464';
         const currentService = (orderInputService ? orderInputService.value.trim() : '') || 'B2C3D';
-        const defaultSuffix = getTodayOrderSuffix();
-        const currentSuffix = (orderInputSuffix ? orderInputSuffix.value.trim() : '') || defaultSuffix;
 
         convertedOrderRows.forEach((item, index) => {
           const rowNumber = 4 + index;
           const targetRow = outWs.getRow(rowNumber);
 
-          const orderCode = item.destShort ? `${item.destShort}${currentSuffix}` : item.orderCode;
-
-          targetRow.getCell(1).value = orderCode;
+          targetRow.getCell(1).value = item.orderCode;
           targetRow.getCell(2).value = currentService;
           // Cột 3 (C): Tên người nhận = nơi nhận (viết tắt) - Cột N
           targetRow.getCell(3).value = item.destShort || '';
@@ -2318,7 +2693,7 @@
 
         let filename = orderInputFilename ? orderInputFilename.value.trim() : '';
         if (!filename) {
-          const firstOrder = Array.from(orderUniqueCodes)[0] || 'ORDER';
+          const firstOrder = Array.from(orderUniqueCodes)[0] ? Array.from(orderUniqueCodes)[0].split('-')[0] : 'ORDER';
           const now = new Date();
           const dateStamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
           filename = `order_honeywell_${firstOrder}_${dateStamp}.xlsx`;
@@ -2336,7 +2711,7 @@
         document.body.removeChild(a);
         URL.revokeObjectURL(downloadUrl);
 
-        showToast(`Đã xuất file tạo order thành công: ${filename}`, 'success');
+        showToast(`Đã xuất ${convertedOrderRows.length} dòng (${orderSummaries.length} đơn) ra file ${filename}!`, 'success');
       } catch (err) {
         console.error('Order Export error:', err);
         showToast('Lỗi khi xuất file: ' + err.message, 'error');
@@ -2351,6 +2726,7 @@
       }
     });
   }
+
 
   // ============================================================
   // TAB 5: CONVERT HONEYWELL -> KDB (PHIẾU CHUYỂN)
