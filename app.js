@@ -2079,7 +2079,7 @@
         shippingRate: 2,
         cod: 0,
         orderReq: 1,
-        paymentType: 3,
+        paymentType: 2,
         productName: productNameStr,
         reqCode: reqCodeStr,
         linkBill: reqCodeStr,       // Cột S (Link bill sàn TMĐT) = Mã yêu cầu (cột B)
@@ -2299,7 +2299,7 @@
           targetRow.getCell(13).value = 2;
           targetRow.getCell(14).value = 0;
           targetRow.getCell(15).value = 1;
-          targetRow.getCell(16).value = 3;
+          targetRow.getCell(16).value = item.paymentType || 2;
           targetRow.getCell(17).value = item.productName || '';
           targetRow.getCell(18).value = '';
           // Cột 19 (S): Link Bill Sàn TMĐT = Mã yêu cầu (Cột B)

@@ -30,7 +30,7 @@
      - `Địa chỉ`: `[Nơi nhận]` - Cột O (ví dụ `KFM_HNI_YHO - CT3 Yên Hoà Park View`).
      - `Mã sản phẩm`: `[Barcode]` (Cột C).
      - `Số lượng xuất`: `[Số lượng cần chuyển]` (Cột Q).
-     - `Mã đối tác VC`: `GHN`, `Gói cước`: `2`, `COD`: `0`, `Yêu cầu`: `1`, `Thanh toán`: `3`.
+     - `Mã đối tác VC`: `GHN`, `Gói cước`: `2`, `COD`: `0`, `Yêu cầu`: `1`, `Thanh toán`: `2`.
      - `Tên hàng hoá`: `[Tên sản phẩm]` (Cột D).
      - `Cột S (Link bill sàn TMĐT)`: `[Mã yêu cầu]` - Cột B.
      - `Mã Cửa Hàng (Cột U)`: `[Nơi nhận (viết tắt)]` - Cột N (ví dụ `B001`).

@@ -16,7 +16,7 @@ Quy tắc ánh xạ (Mapping):
   - Gói cước VC (Cột 13 / M)       <- 2
   - Tiền thu hộ (Cột 14 / N)       <- 0
   - Yêu cầu đơn hàng (Cột 15 / O)  <- 1
-  - Hình thức thanh toán (Cột 16 / P) <- 3
+  - Hình thức thanh toán (Cột 16 / P) <- 2
   - Tên hàng hoá (Cột 17 / Q)      <- [Tên sản phẩm] (Cột D)
   - Link Bill Sàn TMĐT (Cột 19 / S)<- [Mã yêu cầu] (Cột B)
   - Mã Cửa Hàng (Cột 21 / U)       <- [Nơi nhận (viết tắt)] (Cột N) (ví dụ: B001)
@@ -74,7 +74,7 @@ def convert_kdb_transfer_to_order(
     shipping_rate=2,
     cod=0,
     order_req=1,
-    payment_type=3,
+    payment_type=2,
     suffix=None
 ):
     if suffix is None:
