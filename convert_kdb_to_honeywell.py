@@ -1,7 +1,7 @@
 """
 Script chuyển đổi dữ liệu từ File Yêu Cầu Chuyển Hàng KDB sang File Tạo Order Honeywell.
 Quy tắc ánh xạ (Mapping):
-  - Mã đơn gốc (Cột 1 / A)        <- [Nơi nhận (viết tắt)] + "_1" (ví dụ: B001 -> B001_1)
+  - Mã đơn gốc (Cột 1 / A)        <- [Nơi nhận (viết tắt)] & "_" & ddmmyyyy (ví dụ: B001 -> B001_10102026)
   - Gói dịch vụ (Cột 2 / B)        <- B2C3D
   - Tên người nhận (Cột 3 / C)     <- [Nơi nhận (viết tắt)] (Cột N) (ví dụ: B001)
   - Số điện thoại (Cột 4 / D)      <- 0973468464 (Text)
@@ -74,8 +74,12 @@ def convert_kdb_transfer_to_order(
     cod=0,
     order_req=1,
     payment_type=3,
-    suffix="_1"
+    suffix=None
 ):
+    if suffix is None:
+        today_str = datetime.datetime.now().strftime("%d%m%Y")
+        suffix = f"_{today_str}"
+
     # Determine default paths
     if not input_file_path:
         default_inputs = [

@@ -23,7 +23,7 @@
 4. **Tab 4 - Convert đơn hàng KDB -> Honeywell (Tạo Order):**
    - Chuyển đổi dữ liệu yêu cầu chuyển hàng từ KDB sang file Excel tạo order Honeywell 21 cột chuẩn.
    - Quy tắc:
-     - `Mã đơn gốc`: `[Nơi nhận (viết tắt)]` + `_1` (ví dụ `B001` &rarr; `B001_1`).
+     - `Mã đơn gốc`: `[Nơi nhận (viết tắt)]` + `_` + `ddmmyyyy` ngày hiện tại (ví dụ `B001` &rarr; `B001_10102026`).
      - `Gói dịch vụ`: `B2C3D`.
      - `Tên người nhận`: `[Nơi nhận (viết tắt)]` - Cột N (ví dụ `B001`).
      - `Số điện thoại`: `0973468464` (Text).

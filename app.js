@@ -1815,6 +1815,18 @@
   let orderTotalQty = 0;
   let orderSourceFileName = '';
 
+  function getTodayOrderSuffix() {
+    const now = new Date();
+    const dd = String(now.getDate()).padStart(2, '0');
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const yyyy = now.getFullYear();
+    return `_${dd}${mm}${yyyy}`;
+  }
+
+  if (orderInputSuffix) {
+    orderInputSuffix.value = getTodayOrderSuffix();
+  }
+
   function findTransferColumns(ws) {
     const cols = {
       reqCode: -1,
@@ -1975,7 +1987,8 @@
 
     const phone = (orderInputPhone ? orderInputPhone.value.trim() : '') || '0973468464';
     const serviceType = (orderInputService ? orderInputService.value.trim() : '') || 'B2C3D';
-    const suffix = (orderInputSuffix ? orderInputSuffix.value.trim() : '') || '_1';
+    const defaultSuffix = getTodayOrderSuffix();
+    const suffix = (orderInputSuffix ? orderInputSuffix.value.trim() : '') || defaultSuffix;
 
     for (let r = 2; r <= ws.rowCount; r++) {
       const row = ws.getRow(r);
@@ -2176,6 +2189,7 @@
       if (orderTableToolbar) orderTableToolbar.style.display = 'none';
       if (btnDownloadOrder) btnDownloadOrder.disabled = true;
       if (orderTableBody) orderTableBody.innerHTML = '';
+      if (orderInputSuffix) orderInputSuffix.value = getTodayOrderSuffix();
       showToast('Đã đặt lại dữ liệu tạo order.', 'info');
     });
   }
@@ -2213,7 +2227,8 @@
 
         const currentPhone = (orderInputPhone ? orderInputPhone.value.trim() : '') || '0973468464';
         const currentService = (orderInputService ? orderInputService.value.trim() : '') || 'B2C3D';
-        const currentSuffix = (orderInputSuffix ? orderInputSuffix.value.trim() : '') || '_1';
+        const defaultSuffix = getTodayOrderSuffix();
+        const currentSuffix = (orderInputSuffix ? orderInputSuffix.value.trim() : '') || defaultSuffix;
 
         convertedOrderRows.forEach((item, index) => {
           const rowNumber = 4 + index;

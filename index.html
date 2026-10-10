@@ -915,8 +915,8 @@
                 </div>
                 <div class="arrow-divider">▲ Quy định</div>
                 <div class="source-col">
-                  <span class="source-tag">Nơi nhận VT + _1</span>
-                  <span class="source-desc">Ví dụ: B001 &rarr; B001_1</span>
+                  <span class="source-tag">Nơi nhận VT & Ngày</span>
+                  <span class="source-desc">Ví dụ: B001 &rarr; B001_10102026</span>
                 </div>
               </div>
 
@@ -1107,8 +1107,8 @@
                 <input type="text" id="orderInputService" class="form-input" value="B2C3D" />
               </div>
               <div class="form-group">
-                <label for="orderInputSuffix">Hậu tố mã đơn (Mã đơn = [Nơi nhận VT] + Hậu tố):</label>
-                <input type="text" id="orderInputSuffix" class="form-input" value="_1" />
+                <label for="orderInputSuffix">Hậu tố mã đơn (Mặc định: _ddmmyyyy ngày hiện tại):</label>
+                <input type="text" id="orderInputSuffix" class="form-input" placeholder="_ddmmyyyy (VD: _10102026)" />
               </div>
               <div class="form-group">
                 <label for="orderInputFilename">Tên file xuất ra:</label>
@@ -1210,7 +1210,7 @@
                   <th style="width: 50px;">STT</th>
                   <th>
                     <span class="th-col-badge">Cột A</span> Mã đơn gốc*
-                    <span class="th-source-badge">Nơi nhận VT + _1</span>
+                    <span class="th-source-badge">Nơi nhận VT + _ddmmyyyy</span>
                   </th>
                   <th>
                     <span class="th-col-badge">Cột B</span> Gói DV*
