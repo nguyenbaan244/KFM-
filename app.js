@@ -45,6 +45,15 @@
       if (tabBtnPTKDB) tabBtnPTKDB.classList.add('active');
       if (tabPTKDB) tabPTKDB.style.display = 'block';
     }
+
+    // Tự động mở folder cha của tab đang active
+    const activeBtn = document.querySelector(`.nav-tab-btn[data-tab="${targetTab}"]`);
+    if (activeBtn) {
+      const parentFolder = activeBtn.closest('.tree-folder');
+      if (parentFolder) {
+        parentFolder.classList.add('open');
+      }
+    }
   }
 
   tabBtnConvert.addEventListener('click', () => switchTab('tabConvert'));
@@ -58,6 +67,17 @@
   if (tabBtnPTKDB) {
     tabBtnPTKDB.addEventListener('click', () => switchTab('tabPTKDB'));
   }
+
+  // Tree Folders Accordion Toggle
+  document.querySelectorAll('.tree-folder-header').forEach(header => {
+    header.addEventListener('click', (e) => {
+      e.preventDefault();
+      const folder = header.closest('.tree-folder');
+      if (folder) {
+        folder.classList.toggle('open');
+      }
+    });
+  });
 
   // ============================================================
   // UTILITIES

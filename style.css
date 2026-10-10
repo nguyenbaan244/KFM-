@@ -107,20 +107,163 @@ body {
 }
 
 .sidebar-nav {
-  padding: 1.25rem 0.85rem;
+  padding: 1rem 0.75rem;
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.65rem;
 }
 
-.nav-group-title {
-  font-size: 0.68rem;
+/* Tree View Structure */
+.tree-folder {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-folder-header {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 0.45rem 0.55rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.tree-folder-header:hover {
+  background: var(--slate-100);
+  border-color: var(--slate-200);
+}
+
+.tree-folder-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.folder-chevron {
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate-400);
+  transition: transform 0.2s ease;
+}
+
+.folder-chevron svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+}
+
+.tree-folder:not(.open) .folder-chevron svg {
+  transform: rotate(-90deg);
+}
+
+.tree-folder.open .folder-chevron svg {
+  transform: rotate(0deg);
+}
+
+.folder-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.folder-icon svg {
+  width: 15px;
+  height: 15px;
+}
+
+.folder-icon.inbound {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+
+.folder-icon.inventory {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.folder-icon.outbound {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.tree-folder-title strong {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--slate-700);
+  text-transform: uppercase;
+}
+
+.tree-count {
+  font-size: 0.65rem;
   font-weight: 700;
   color: var(--slate-400);
-  letter-spacing: 0.06em;
-  padding: 0.25rem 0.6rem 0.5rem;
-  text-transform: uppercase;
+  background: var(--slate-100);
+  border: 1px solid var(--slate-200);
+  padding: 0.08rem 0.45rem;
+  border-radius: 9999px;
+}
+
+.tree-folder-children {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-left: 1.15rem;
+  padding-left: 0.65rem;
+  margin-top: 0.25rem;
+  border-left: 2px solid var(--slate-200);
+  transition: all 0.25s ease;
+}
+
+.tree-folder:not(.open) .tree-folder-children {
+  display: none;
+}
+
+.tree-folder-children .nav-tab-btn {
+  padding: 0.6rem 0.75rem;
+  border-radius: 8px;
+  gap: 0.6rem;
+}
+
+.tree-node-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--slate-300);
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+
+.nav-tab-btn:hover .tree-node-dot {
+  background: var(--primary);
+  transform: scale(1.3);
+}
+
+.nav-tab-btn.active .tree-node-dot {
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.8);
+  transform: scale(1.4);
+}
+
+.tree-folder-children .tab-btn-text strong {
+  font-size: 0.83rem;
+}
+
+.tree-folder-children .tab-btn-text span {
+  font-size: 0.7rem;
 }
 
 .nav-tab-btn {

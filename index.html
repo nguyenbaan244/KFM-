@@ -25,74 +25,111 @@
       </div>
 
       <nav class="sidebar-nav">
-        <div class="nav-group-title">CHỨC NĂNG CHÍNH</div>
-        
-        <!-- Tab 1: Convert PO -->
-        <button type="button" class="nav-tab-btn active" id="tabBtnConvert" data-tab="tabConvert">
-          <div class="tab-btn-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
-            </svg>
+        <!-- NHÓM 1: INBOUND -->
+        <div class="tree-folder open" data-group="inbound">
+          <button type="button" class="tree-folder-header">
+            <div class="tree-folder-title">
+              <span class="folder-chevron">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </span>
+              <span class="folder-icon inbound">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 3.75H6.912a2.25 2.25 0 00-2.15 1.586L2.343 13.5m0 0H7.5a2.25 2.25 0 012.25 2.25v.75m-7.5-3l1.928 6.748A2.25 2.25 0 006.37 21h11.26a2.25 2.25 0 002.099-1.502L21.657 13.5m0 0H16.5a2.25 2.25 0 01-2.25-2.25v-.75m7.5 3l-2.42-8.164A2.25 2.25 0 0017.088 3.75H15M12 9v6m0 0l-3-3m3 3l3-3" />
+                </svg>
+              </span>
+              <strong>INBOUND</strong>
+            </div>
+            <span class="tree-count">1</span>
+          </button>
+          <div class="tree-folder-children">
+            <!-- Tab 1: Convert PO -->
+            <button type="button" class="nav-tab-btn active" id="tabBtnConvert" data-tab="tabConvert">
+              <div class="tree-node-dot"></div>
+              <div class="tab-btn-text">
+                <strong>Covert template KDB &rarr; Honeywell</strong>
+                <span>PO sang File Nhập Hàng</span>
+              </div>
+            </button>
           </div>
-          <div class="tab-btn-text">
-            <strong>Covert template KDB -> Honeywell</strong>
-            <span>Chuyển đổi PO sang File Nhập Hàng</span>
-          </div>
-        </button>
+        </div>
 
-        <!-- Tab 2: Check Tồn Kho -->
-        <button type="button" class="nav-tab-btn" id="tabBtnInventory" data-tab="tabInventory">
-          <div class="tab-btn-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v17.25m0 0l-4.5-4.5m4.5 4.5l4.5-4.5M3 9h18M3 15h18" />
-            </svg>
+        <!-- NHÓM 2: INVENTORY -->
+        <div class="tree-folder open" data-group="inventory">
+          <button type="button" class="tree-folder-header">
+            <div class="tree-folder-title">
+              <span class="folder-chevron">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </span>
+              <span class="folder-icon inventory">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+                </svg>
+              </span>
+              <strong>INVENTORY</strong>
+            </div>
+            <span class="tree-count">2</span>
+          </button>
+          <div class="tree-folder-children">
+            <!-- Tab 2: Check Tồn Kho -->
+            <button type="button" class="nav-tab-btn" id="tabBtnInventory" data-tab="tabInventory">
+              <div class="tree-node-dot"></div>
+              <div class="tab-btn-text">
+                <strong>Check tồn KDB và Honeywell</strong>
+                <span>Đối soát lệch tồn SKU</span>
+              </div>
+            </button>
+            <!-- Tab 3: Check Vị Trí Tồn Honeywell -->
+            <button type="button" class="nav-tab-btn" id="tabBtnLocHW" data-tab="tabLocHW">
+              <div class="tree-node-dot"></div>
+              <div class="tab-btn-text">
+                <strong>Check vị trí tồn Honeywell</strong>
+                <span>Location chuẩn XX-YYY-Z</span>
+              </div>
+            </button>
           </div>
-          <div class="tab-btn-text">
-            <strong>Check tồn KDB và Honeywell</strong>
-            <span>So sánh tồn kho & phân tích lệch SKU</span>
-          </div>
-        </button>
+        </div>
 
-        <!-- Tab 3: Check Vị Trí Tồn Honeywell -->
-        <button type="button" class="nav-tab-btn" id="tabBtnLocHW" data-tab="tabLocHW">
-          <div class="tab-btn-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
-              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-            </svg>
+        <!-- NHÓM 3: OUTBOUND -->
+        <div class="tree-folder open" data-group="outbound">
+          <button type="button" class="tree-folder-header">
+            <div class="tree-folder-title">
+              <span class="folder-chevron">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+                </svg>
+              </span>
+              <span class="folder-icon outbound">
+                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.125-1.125v-3.75c0-.621-.504-1.125-1.125-1.125H16.5m3 4.875V10.5m-3 8.25v-3.75m0 0a3 3 0 00-3-3H9a3 3 0 00-3 3v3.75m10.5-3.75H6" />
+                </svg>
+              </span>
+              <strong>OUTBOUND</strong>
+            </div>
+            <span class="tree-count">2</span>
+          </button>
+          <div class="tree-folder-children">
+            <!-- Tab 4: Convert Đơn Hàng KDB -> Honeywell -->
+            <button type="button" class="nav-tab-btn" id="tabBtnOrderKDB" data-tab="tabOrderKDB">
+              <div class="tree-node-dot"></div>
+              <div class="tab-btn-text">
+                <strong>Convert KDB &rarr; Honeywell</strong>
+                <span>Tạo order chuyển hàng</span>
+              </div>
+            </button>
+            <!-- Tab 5: Convert Honeywell -> KDB (Phiếu Chuyển) -->
+            <button type="button" class="nav-tab-btn" id="tabBtnPTKDB" data-tab="tabPTKDB">
+              <div class="tree-node-dot"></div>
+              <div class="tab-btn-text">
+                <strong>Convert Honeywell &rarr; KDB</strong>
+                <span>Tạo Phiếu Chuyển PT KDB</span>
+              </div>
+            </button>
           </div>
-          <div class="tab-btn-text">
-            <strong>Check vị trí tồn Honeywell</strong>
-            <span>Kiểm tra SKU & Location chuẩn XX-YYY-Z</span>
-          </div>
-        </button>
-
-        <!-- Tab 4: Convert Đơn Hàng KDB -> Honeywell -->
-        <button type="button" class="nav-tab-btn" id="tabBtnOrderKDB" data-tab="tabOrderKDB">
-          <div class="tab-btn-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.125-1.125v-3.75c0-.621-.504-1.125-1.125-1.125H16.5m3 4.875V10.5m-3 8.25v-3.75m0 0a3 3 0 00-3-3H9a3 3 0 00-3 3v3.75m10.5-3.75H6" />
-            </svg>
-          </div>
-          <div class="tab-btn-text">
-            <strong>Convert đơn hàng KDB &rarr; Honeywell</strong>
-            <span>Tạo order chuyển hàng sang Honeywell</span>
-          </div>
-        </button>
-
-        <!-- Tab 5: Convert Honeywell -> KDB (Phiếu Chuyển) -->
-        <button type="button" class="nav-tab-btn" id="tabBtnPTKDB" data-tab="tabPTKDB">
-          <div class="tab-btn-icon">
-            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
-            </svg>
-          </div>
-          <div class="tab-btn-text">
-            <strong>Convert Honeywell &rarr; KDB</strong>
-            <span>Tạo Phiếu Chuyển (Template PT KDB)</span>
-          </div>
-          <span class="tab-badge-new">Mới</span>
-        </button>
+        </div>
       </nav>
 
       <div class="sidebar-footer">
