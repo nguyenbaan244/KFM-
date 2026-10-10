@@ -15,7 +15,26 @@
    - Xuất báo cáo đối soát chênh lệch chi tiết dạng Excel (.xlsx).
    - Đi kèm script dòng lệnh `check_inventory.py` cho tự động hóa.
 
-## Quy Tắc Ánh Xạ Dữ Liệu (10 Cột)
+3. **Tab 3 - Check vị trí tồn Honeywell:**
+   - Kiểm tra định dạng vị trí lưu kho chuẩn `XX-YYY-Z`.
+   - Báo cáo SKU ở vị trí chuẩn, chưa vào chuẩn, hoặc không có vị trí.
+   - Script dòng lệnh: `check_honeywell_location.py`.
+
+4. **Tab 4 - Convert đơn hàng KDB -> Honeywell (Tạo Order):**
+   - Chuyển đổi dữ liệu yêu cầu chuyển hàng từ KDB sang file Excel tạo order Honeywell 21 cột chuẩn.
+   - Quy tắc:
+     - `Mã đơn gốc`: `[Nơi nhận (viết tắt)]` + `_1` (ví dụ `B001` &rarr; `B001_1`).
+     - `Gói dịch vụ`: `B2C3D`.
+     - `Tên người nhận`: `[Nơi nhận]`.
+     - `Số điện thoại`: `0973468464` (Text).
+     - `Mã sản phẩm`: `[Barcode]`.
+     - `Số lượng xuất`: `[Số lượng cần chuyển]`.
+     - `Mã đối tác VC`: `GHN`, `Gói cước`: `2`, `COD`: `0`, `Yêu cầu`: `1`, `Thanh toán`: `3`.
+     - `Tên hàng hoá`: `[Tên sản phẩm]`.
+     - Các trường còn lại để trống.
+   - Đi kèm script dòng lệnh: `convert_kdb_to_honeywell.py`.
+
+## Quy Tắc Ánh Xạ Dữ Liệu PO (10 Cột)
 | Cột Nhập Hàng | Tên Trường | Cột Nguồn PO | Ghi Chú |
 | :--- | :--- | :--- | :--- |
 | **A** | `orderInboundCode` | **B** | Mã PO |
@@ -34,11 +53,12 @@
    ```bash
    python server.py
    ```
-2. **Chạy script Python:**
+2. **Chạy script Python chuyển PO:**
    ```bash
    python convert_po.py [duong_dan_file_po] [duong_dan_file_xuat]
    ```
-   Ví dụ:
+3. **Chạy script Python tạo Order Honeywell:**
    ```bash
-   python convert_po.py PO.xlsx ket_qua_nhap_hang.xlsx
+   python convert_kdb_to_honeywell.py [duong_dan_file_kdb] [duong_dan_file_xuat]
    ```
+

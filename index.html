@@ -65,6 +65,19 @@
             <strong>Check vị trí tồn Honeywell</strong>
             <span>Kiểm tra SKU & Location chuẩn XX-YYY-Z</span>
           </div>
+        </button>
+
+        <!-- Tab 4: Convert Đơn Hàng KDB -> Honeywell -->
+        <button type="button" class="nav-tab-btn" id="tabBtnOrderKDB" data-tab="tabOrderKDB">
+          <div class="tab-btn-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 18.75a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h6m-9 0H3.375a1.125 1.125 0 01-1.125-1.125V14.25m17.25 4.5a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m3 0h1.125c.621 0 1.129-.504 1.125-1.125v-3.75c0-.621-.504-1.125-1.125-1.125H16.5m3 4.875V10.5m-3 8.25v-3.75m0 0a3 3 0 00-3-3H9a3 3 0 00-3 3v3.75m10.5-3.75H6" />
+            </svg>
+          </div>
+          <div class="tab-btn-text">
+            <strong>Convert đơn hàng KDB &rarr; Honeywell</strong>
+            <span>Tạo order chuyển hàng sang Honeywell</span>
+          </div>
           <span class="tab-badge-new">Mới</span>
         </button>
       </nav>
@@ -861,6 +874,373 @@
 
       </section>
 
+      <!-- ========================================== -->
+      <!-- TAB 4: CONVERT ĐƠN HÀNG KDB -> HONEYWELL   -->
+      <!-- ========================================== -->
+      <section class="tab-pane" id="tabOrderKDB" style="display:none;">
+
+        <!-- Header -->
+        <header class="content-header">
+          <div>
+            <h1>Convert Đơn Hàng KDB &rarr; Honeywell</h1>
+            <p>Tự động chuyển đổi file yêu cầu chuyển hàng từ KDB sang file Excel tạo order Honeywell chuẩn 21 cột</p>
+          </div>
+          <div class="header-badge">
+            <span class="badge-dot"></span>
+            <span>Chuẩn Template Order Honeywell</span>
+          </div>
+        </header>
+
+        <!-- Logic Mapping Accordion -->
+        <section class="logic-banner" id="orderLogicBanner">
+          <div class="logic-banner-header" id="btnToggleOrderLogic">
+            <div class="logic-title-group">
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+              <h2>Quy Tắc Ánh Xạ Đơn Hàng (Mapping Logic KDB &rarr; Honeywell)</h2>
+            </div>
+            <svg class="toggle-icon" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </svg>
+          </div>
+
+          <div class="logic-content">
+            <div class="mapping-grid">
+              <!-- Col 1 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 1 (A)</span>
+                  <span class="target-name">Mã đơn gốc *</span>
+                </div>
+                <div class="arrow-divider">▲ Quy định</div>
+                <div class="source-col">
+                  <span class="source-tag">Nơi nhận VT + _1</span>
+                  <span class="source-desc">Ví dụ: B001 &rarr; B001_1</span>
+                </div>
+              </div>
+
+              <!-- Col 2 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 2 (B)</span>
+                  <span class="target-name">Gói dịch vụ *</span>
+                </div>
+                <div class="arrow-divider">▲ Mặc định</div>
+                <div class="source-col">
+                  <span class="source-tag">B2C3D</span>
+                  <span class="source-desc">Dịch vụ 3D</span>
+                </div>
+              </div>
+
+              <!-- Col 3 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 3 (C)</span>
+                  <span class="target-name">Tên người nhận *</span>
+                </div>
+                <div class="arrow-divider">▲ Lấy từ KDB</div>
+                <div class="source-col">
+                  <span class="source-tag">Nơi nhận</span>
+                  <span class="source-desc">Tên chi nhánh / Kho nhận</span>
+                </div>
+              </div>
+
+              <!-- Col 4 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 4 (D)</span>
+                  <span class="target-name">Số điện thoại *</span>
+                </div>
+                <div class="arrow-divider">▲ Cố định</div>
+                <div class="source-col">
+                  <span class="source-tag">0973468464</span>
+                  <span class="source-desc">Định dạng Text</span>
+                </div>
+              </div>
+
+              <!-- Col 5-8 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 5 &rarr; 8</span>
+                  <span class="target-name">Địa chỉ / Xã / Huyện / Tỉnh</span>
+                </div>
+                <div class="arrow-divider">▲ Quy định</div>
+                <div class="source-col">
+                  <span class="source-tag" style="color:#64748b;">Rỗng ("")</span>
+                  <span class="source-desc">Để trống</span>
+                </div>
+              </div>
+
+              <!-- Col 9 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 9 (I)</span>
+                  <span class="target-name">Mã Sản phẩm *</span>
+                </div>
+                <div class="arrow-divider">▲ Lấy từ KDB</div>
+                <div class="source-col">
+                  <span class="source-tag">Barcode</span>
+                  <span class="source-desc">Mã vạch sản phẩm</span>
+                </div>
+              </div>
+
+              <!-- Col 10 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 10 (J)</span>
+                  <span class="target-name">Số lượng Xuất *</span>
+                </div>
+                <div class="arrow-divider">▲ Lấy từ KDB</div>
+                <div class="source-col">
+                  <span class="source-tag">SL cần chuyển</span>
+                  <span class="source-desc">Bỏ dòng nếu &le; 0</span>
+                </div>
+              </div>
+
+              <!-- Col 11-16 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 11 &rarr; 16</span>
+                  <span class="target-name">Thông tin vận chuyển</span>
+                </div>
+                <div class="arrow-divider">▲ Quy định</div>
+                <div class="source-col">
+                  <span class="source-tag">GHN</span>
+                  <span class="source-desc">Gói: 2 | COD: 0 | YC: 1 | TT: 3</span>
+                </div>
+              </div>
+
+              <!-- Col 17 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 17 (Q)</span>
+                  <span class="target-name">Tên hàng hoá *</span>
+                </div>
+                <div class="arrow-divider">▲ Lấy từ KDB</div>
+                <div class="source-col">
+                  <span class="source-tag">Tên sản phẩm</span>
+                  <span class="source-desc">Tên chi tiết mặt hàng</span>
+                </div>
+              </div>
+
+              <!-- Col 18-21 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 18 &rarr; 21</span>
+                  <span class="target-name">Các trường còn lại</span>
+                </div>
+                <div class="arrow-divider">▲ Quy định</div>
+                <div class="source-col">
+                  <span class="source-tag" style="color:#64748b;">Rỗng ("")</span>
+                  <span class="source-desc">Để trống</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Upload & Quick Settings -->
+        <div class="upload-section">
+          <!-- Dropzone -->
+          <div class="dropzone-card" id="orderDropZone">
+            <input type="file" id="orderFileInput" accept=".xlsx, .xls" style="display:none;" />
+            <div class="dropzone-icon">
+              <svg width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
+              </svg>
+            </div>
+            <h3 class="dropzone-title">Kéo & thả file Yêu Cầu Chuyển Hàng KDB vào đây</h3>
+            <p class="dropzone-subtitle">Hỗ trợ file Excel (.xlsx, .xls) xuất từ hệ thống KDB</p>
+            <button type="button" class="btn-file-select" id="btnSelectOrderFile">
+              <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" />
+              </svg>
+              Chọn file KDB từ máy tính
+            </button>
+            <div class="demo-trigger">
+              Hoặc <button type="button" class="btn-demo-file" id="btnLoadDemoOrder">tải file yêu cầu chuyển hàng mẫu có sẵn</button>
+            </div>
+          </div>
+
+          <!-- Quick Settings -->
+          <div class="settings-card">
+            <div>
+              <h3>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 11-3 0m3 0a1.5 1.5 0 10-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 01-3 0m3 0a1.5 1.5 0 00-3 0m-9.75 0h9.75" />
+                </svg>
+                Tùy Chọn Thông Số Order
+              </h3>
+              <div class="form-group">
+                <label for="orderInputPhone">Số điện thoại nhận hàng (Cột D):</label>
+                <input type="text" id="orderInputPhone" class="form-input" value="0973468464" />
+              </div>
+              <div class="form-group">
+                <label for="orderInputService">Gói dịch vụ (Cột B):</label>
+                <input type="text" id="orderInputService" class="form-input" value="B2C3D" />
+              </div>
+              <div class="form-group">
+                <label for="orderInputSuffix">Hậu tố mã đơn (Mã đơn = [Nơi nhận VT] + Hậu tố):</label>
+                <input type="text" id="orderInputSuffix" class="form-input" value="_1" />
+              </div>
+              <div class="form-group">
+                <label for="orderInputFilename">Tên file xuất ra:</label>
+                <input type="text" id="orderInputFilename" class="form-input" placeholder="Tự động đặt theo Mã đơn" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics Cards -->
+        <div class="stats-section" id="orderStatsSection" style="display:none;">
+          <div class="stat-card">
+            <div class="stat-icon blue">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Số dòng order</p>
+              <h4 id="statOrderTotalRows">0</h4>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon purple">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Mã đơn gốc</p>
+              <h4 id="statOrderCode">-</h4>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon green">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Tổng số lượng xuất</p>
+              <h4 id="statOrderTotalQty">0</h4>
+            </div>
+          </div>
+
+          <div class="stat-card">
+            <div class="stat-icon amber">
+              <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+              </svg>
+            </div>
+            <div class="stat-info">
+              <p>Nơi nhận</p>
+              <h4 id="statOrderDest" style="font-size: 0.95rem; line-height: 1.3;">-</h4>
+            </div>
+          </div>
+        </div>
+
+        <!-- Preview Table Section -->
+        <section class="table-section" id="orderTableSection" style="display:none;">
+          <div class="table-header">
+            <div>
+              <h3>Bảng Xem Trước Dữ Liệu Tạo Order Honeywell</h3>
+              <p id="orderPreviewSubtitle">Kiểm tra thông tin chi tiết trước khi xuất file</p>
+            </div>
+            <div class="table-actions">
+              <button type="button" class="btn-secondary" id="btnResetOrder">
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+                </svg>
+                Tải lại
+              </button>
+              <button type="button" class="btn-download" id="btnDownloadOrder" disabled>
+                <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Xuất File Tạo Order Honeywell (.xlsx)
+              </button>
+            </div>
+          </div>
+
+          <div class="table-toolbar" id="orderTableToolbar" style="display:none;">
+            <div class="search-box">
+              <svg class="search-icon" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
+              </svg>
+              <input type="text" id="orderSearchInput" placeholder="Tìm theo Barcode, Tên sản phẩm, Mã đơn..." />
+            </div>
+            <div class="table-stats" id="orderTableRowCount">Hiển thị 0 dòng</div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table" id="orderPreviewTable">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">STT</th>
+                  <th>
+                    <span class="th-col-badge">Cột A</span> Mã đơn gốc*
+                    <span class="th-source-badge">Nơi nhận VT + _1</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột B</span> Gói DV*
+                    <span class="th-source-badge">B2C3D</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột C</span> Người nhận*
+                    <span class="th-source-badge">Nơi nhận KDB</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột D</span> SĐT*
+                    <span class="th-source-badge">0973468464</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột I</span> Mã Sản phẩm*
+                    <span class="th-source-badge">Barcode</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột J</span> SL Xuất*
+                    <span class="th-source-badge">SL cần chuyển</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột K</span> ĐVVC
+                    <span class="th-source-badge">GHN</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột M</span> Gói cước*
+                    <span class="th-source-badge">2 (Chuẩn)</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột N</span> Thu hộ*
+                    <span class="th-source-badge">COD = 0</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột O</span> Yêu cầu*
+                    <span class="th-source-badge">1</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột P</span> Thanh toán*
+                    <span class="th-source-badge">3 (Công nợ)</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột Q</span> Tên hàng hoá*
+                    <span class="th-source-badge">Tên sản phẩm</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody id="orderTableBody">
+                <!-- Dynamically populated -->
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </section>
+
     </div>
   </div>
 
@@ -872,6 +1252,7 @@
   <script src="template_b64.js"></script>
   <script src="sample_po_b64.js"></script>
   <script src="sample_inventory_b64.js"></script>
+  <script src="sample_order_b64.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
