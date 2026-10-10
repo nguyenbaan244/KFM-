@@ -21,7 +21,7 @@
 | **A** | `orderInboundCode` | **B** | Mã PO |
 | **B** | `productCode` | **T** | Mã hàng (Barcode) |
 | **C** | `expectedQuantity` | **AD** | Số lượng PR thực nhận (Bỏ nếu = 0) |
-| **D** | `estimateReceiveTime` | **G** | Ngày NCC xác nhận (`dd/mm/yyyy`) |
+| **D** | `estimateReceiveTime` | **G** | Ngày NCC xác nhận (Kiểu Text, nếu < Today thì lấy Today) |
 | **E** | `customerNote` | - | Để trống |
 | **F** | `zoneType` | - | Điền `B2B` |
 | **G** | `supplier` | **K** | Tên nhà cung cấp |

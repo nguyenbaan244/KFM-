@@ -89,6 +89,61 @@
     return str;
   }
 
+  function parseDate(val) {
+    if (!val) return null;
+    if (val instanceof Date && !isNaN(val.getTime())) {
+      return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+    }
+    if (typeof val === 'object' && val.result) {
+      return parseDate(val.result);
+    }
+    if (typeof val === 'number' && val > 30000) {
+      const utcDays = Math.floor(val - 25569);
+      const d = new Date(utcDays * 86400 * 1000);
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    }
+    let str = String(val).trim();
+    if (!str || str.toLowerCase() === 'none') return null;
+    if (str.includes(' ')) {
+      str = str.split(/\s+/)[0];
+    }
+    const dmy = str.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/);
+    if (dmy) {
+      const day = parseInt(dmy[1], 10);
+      const month = parseInt(dmy[2], 10) - 1;
+      const year = parseInt(dmy[3], 10);
+      const d = new Date(year, month, day);
+      if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+        return d;
+      }
+    }
+    const ymd = str.match(/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/);
+    if (ymd) {
+      const year = parseInt(ymd[1], 10);
+      const month = parseInt(ymd[2], 10) - 1;
+      const day = parseInt(ymd[3], 10);
+      const d = new Date(year, month, day);
+      if (d.getFullYear() === year && d.getMonth() === month && d.getDate() === day) {
+        return d;
+      }
+    }
+    return null;
+  }
+
+  function processEstimateDate(val) {
+    if (!val) return '';
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const parsed = parseDate(val);
+    if (parsed) {
+      if (parsed < today) {
+        return formatDate(today);
+      }
+      return formatDate(parsed);
+    }
+    return formatDate(val);
+  }
+
   function formatNumber(num) {
     if (num == null || isNaN(num)) return '0';
     return Number(num).toLocaleString('vi-VN');
@@ -283,7 +338,7 @@
         continue;
       }
 
-      const estDateStr = formatDate(estDateVal);
+      const estDateStr = processEstimateDate(estDateVal);
       const supplier = supplierVal != null ? String(supplierVal).trim() : '';
       const nsxStr = formatDate(nsxVal);
       const hsdStr = formatDate(hsdVal);
@@ -517,6 +572,12 @@
       const selectedZone = selectChannel.value || 'B2B';
       const userNote = inputCustomerNote.value || '';
 
+      // Thiết lập định dạng kiểu Text (@) cho Cột D (giống cột I & J)
+      outWs.getColumn(4).numFmt = '@';
+      outWs.getColumn(8).numFmt = '@';
+      outWs.getColumn(9).numFmt = '@';
+      outWs.getColumn(10).numFmt = '@';
+
       convertedRows.forEach((item, index) => {
         const rowNumber = 3 + index;
         const targetRow = outWs.getRow(rowNumber);
@@ -524,13 +585,28 @@
         targetRow.getCell(1).value = item.colA_poCode || '';
         targetRow.getCell(2).value = item.colB_productCode || '';
         targetRow.getCell(3).value = Number(item.colC_expectedQty) || 0;
-        targetRow.getCell(4).value = item.colD_estimateReceiveTime || '';
+
+        // Cột D: estimateReceiveTime - kiểu text giống cột I & J, nếu < today thì đổi thành today
+        const estDateFinal = processEstimateDate(item.colD_estimateReceiveTime);
+        const cellD = targetRow.getCell(4);
+        cellD.value = estDateFinal || '';
+        cellD.numFmt = '@';
+
         targetRow.getCell(5).value = userNote || item.colE_customerNote || '';
         targetRow.getCell(6).value = selectedZone;
         targetRow.getCell(7).value = item.colG_supplier || '';
-        targetRow.getCell(8).value = item.colH_productionDate || '';
-        targetRow.getCell(9).value = item.colI_expiryDate || '';
-        targetRow.getCell(10).value = item.colJ_inboundDate || '';
+
+        const cellH = targetRow.getCell(8);
+        cellH.value = item.colH_productionDate || '';
+        cellH.numFmt = '@';
+
+        const cellI = targetRow.getCell(9);
+        cellI.value = item.colI_expiryDate || '';
+        cellI.numFmt = '@';
+
+        const cellJ = targetRow.getCell(10);
+        cellJ.value = item.colJ_inboundDate || '';
+        cellJ.numFmt = '@';
 
         targetRow.commit();
       });

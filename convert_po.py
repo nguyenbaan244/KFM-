@@ -4,7 +4,7 @@ Quy tắc ánh xạ (Mapping):
   - orderInboundCode (Cột A)    <- Cột B PO (Mã PO)
   - productCode (Cột B)         <- Cột T PO (Mã hàng)
   - expectedQuantity (Cột C)    <- Cột AD PO (Số lượng PR thực nhận) [Nếu = 0 thì bỏ qua]
-  - estimateReceiveTime (Cột D) <- Cột G PO (Ngày giao hàng NCC xác nhận, định dạng dd/mm/yyyy)
+  - estimateReceiveTime (Cột D) <- Cột G PO (Ngày giao hàng NCC xác nhận, định dạng Text dd/mm/yyyy - nếu nhỏ hơn today thì đổi thành today)
   - customerNote (Cột E)        <- Để trống
   - zoneType (Cột F)            <- Điền B2B
   - supplier (Cột G)            <- Cột K PO (Tên nhà cung cấp)
@@ -28,6 +28,32 @@ try:
 except Exception:
     pass
 
+def parse_date(val):
+    if val is None:
+        return None
+    if isinstance(val, datetime.datetime):
+        return val.date()
+    if isinstance(val, datetime.date):
+        return val
+    if isinstance(val, (int, float)):
+        if val > 30000:
+            try:
+                import openpyxl.utils.datetime
+                return openpyxl.utils.datetime.from_excel(val).date()
+            except Exception:
+                pass
+    s = str(val).strip()
+    if not s or s.lower() == "none":
+        return None
+    if " " in s:
+        s = s.split()[0]
+    for fmt in ("%d/%m/%Y", "%d-%m-%Y", "%Y-%m-%d", "%Y/%m/%d", "%d/%m/%y", "%d-%m-%y"):
+        try:
+            return datetime.datetime.strptime(s, fmt).date()
+        except ValueError:
+            continue
+    return None
+
 def format_date_str(val):
     if val is None:
         return ""
@@ -41,6 +67,20 @@ def format_date_str(val):
         if "/" in parts[0] or "-" in parts[0]:
             return parts[0]
     return s
+
+def process_estimate_date(val, today=None):
+    if today is None:
+        today = datetime.date.today()
+    if isinstance(today, datetime.datetime):
+        today = today.date()
+    if val is None:
+        return ""
+    parsed = parse_date(val)
+    if parsed is not None:
+        if parsed < today:
+            return today.strftime("%d/%m/%Y")
+        return parsed.strftime("%d/%m/%Y")
+    return format_date_str(val)
 
 def find_column_indices(ws_po):
     # Default indices based on user spec:
@@ -124,7 +164,8 @@ def convert_po_to_inbound(po_file_path=None, template_path=None, output_path=Non
     if ws_out.max_row >= 3:
         ws_out.delete_rows(3, ws_out.max_row - 2)
 
-    today_str = datetime.datetime.now().strftime("%d/%m/%Y")
+    today_dt = datetime.date.today()
+    today_str = today_dt.strftime("%d/%m/%Y")
     out_row = 3
     po_codes = set()
     total_qty = 0
@@ -166,8 +207,9 @@ def convert_po_to_inbound(po_file_path=None, template_path=None, output_path=Non
         ws_out.cell(out_row, 2, str(product_code).strip() if product_code is not None else "")
         # Cột C: expectedQuantity <- Số lượng PR thực nhận (Cột AD)
         ws_out.cell(out_row, 3, final_qty)
-        # Cột D: estimateReceiveTime <- Ngày giao hàng NCC xác nhận (Cột G)
-        ws_out.cell(out_row, 4, format_date_str(est_date_val))
+        # Cột D: estimateReceiveTime <- Ngày giao hàng NCC xác nhận (Cột G), kiểu text '@', nếu < today thì đổi thành today
+        cell_d = ws_out.cell(out_row, 4, process_estimate_date(est_date_val, today_dt))
+        cell_d.number_format = '@'
         # Cột E: customerNote <- Để trống (hoặc ghi chú tùy chọn nếu có)
         ws_out.cell(out_row, 5, note if note else "")
         # Cột F: zoneType <- Điền B2B
@@ -175,13 +217,22 @@ def convert_po_to_inbound(po_file_path=None, template_path=None, output_path=Non
         # Cột G: supplier <- Tên nhà cung cấp (Cột K)
         ws_out.cell(out_row, 7, str(supplier_val).strip() if supplier_val is not None else "")
         # Cột H: productionDate <- NSX (Cột X)
-        ws_out.cell(out_row, 8, format_date_str(nsx_val))
+        cell_h = ws_out.cell(out_row, 8, format_date_str(nsx_val))
+        cell_h.number_format = '@'
         # Cột I: expiryDate <- HSD (Cột Y)
-        ws_out.cell(out_row, 9, format_date_str(hsd_val))
+        cell_i = ws_out.cell(out_row, 9, format_date_str(hsd_val))
+        cell_i.number_format = '@'
         # Cột J: inboundDate <- Today (Ngày hôm nay)
-        ws_out.cell(out_row, 10, today_str)
+        cell_j = ws_out.cell(out_row, 10, today_str)
+        cell_j.number_format = '@'
 
         out_row += 1
+
+    # Đảm bảo định dạng cột D, H, I, J là text (@)
+    ws_out.column_dimensions['D'].number_format = '@'
+    ws_out.column_dimensions['H'].number_format = '@'
+    ws_out.column_dimensions['I'].number_format = '@'
+    ws_out.column_dimensions['J'].number_format = '@'
 
     total_converted = out_row - 3
     if total_converted == 0:
