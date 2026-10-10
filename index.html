@@ -941,8 +941,8 @@
                 </div>
                 <div class="arrow-divider">▲ Lấy từ KDB</div>
                 <div class="source-col">
-                  <span class="source-tag">Nơi nhận</span>
-                  <span class="source-desc">Tên chi nhánh / Kho nhận</span>
+                  <span class="source-tag">Nơi nhận (viết tắt)</span>
+                  <span class="source-desc">Cột N (Ví dụ: B001)</span>
                 </div>
               </div>
 
@@ -959,11 +959,24 @@
                 </div>
               </div>
 
-              <!-- Col 5-8 -->
+              <!-- Col 5 -->
               <div class="mapping-card">
                 <div class="target-col">
-                  <span class="col-tag">Cột 5 &rarr; 8</span>
-                  <span class="target-name">Địa chỉ / Xã / Huyện / Tỉnh</span>
+                  <span class="col-tag">Cột 5 (E)</span>
+                  <span class="target-name">Địa chỉ *</span>
+                </div>
+                <div class="arrow-divider">▲ Lấy từ KDB</div>
+                <div class="source-col">
+                  <span class="source-tag">Nơi nhận</span>
+                  <span class="source-desc">Cột O (Tên kho / chi nhánh)</span>
+                </div>
+              </div>
+
+              <!-- Col 6-8 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 6 &rarr; 8</span>
+                  <span class="target-name">Xã / Huyện / Tỉnh</span>
                 </div>
                 <div class="arrow-divider">▲ Quy định</div>
                 <div class="source-col">
@@ -981,7 +994,7 @@
                 <div class="arrow-divider">▲ Lấy từ KDB</div>
                 <div class="source-col">
                   <span class="source-tag">Barcode</span>
-                  <span class="source-desc">Mã vạch sản phẩm</span>
+                  <span class="source-desc">Cột C (Mã vạch)</span>
                 </div>
               </div>
 
@@ -994,7 +1007,7 @@
                 <div class="arrow-divider">▲ Lấy từ KDB</div>
                 <div class="source-col">
                   <span class="source-tag">SL cần chuyển</span>
-                  <span class="source-desc">Bỏ dòng nếu &le; 0</span>
+                  <span class="source-desc">Cột Q (Bỏ dòng nếu &le; 0)</span>
                 </div>
               </div>
 
@@ -1020,14 +1033,27 @@
                 <div class="arrow-divider">▲ Lấy từ KDB</div>
                 <div class="source-col">
                   <span class="source-tag">Tên sản phẩm</span>
-                  <span class="source-desc">Tên chi tiết mặt hàng</span>
+                  <span class="source-desc">Cột D</span>
                 </div>
               </div>
 
-              <!-- Col 18-21 -->
+              <!-- Col 19 -->
               <div class="mapping-card">
                 <div class="target-col">
-                  <span class="col-tag">Cột 18 &rarr; 21</span>
+                  <span class="col-tag">Cột 19 (S)</span>
+                  <span class="target-name">Link Bill Sàn TMĐT</span>
+                </div>
+                <div class="arrow-divider">▲ Lấy từ KDB</div>
+                <div class="source-col">
+                  <span class="source-tag">Mã yêu cầu</span>
+                  <span class="source-desc">Cột B (Mã đơn yêu cầu)</span>
+                </div>
+              </div>
+
+              <!-- Col 18, 20, 21 -->
+              <div class="mapping-card">
+                <div class="target-col">
+                  <span class="col-tag">Cột 18, 20, 21</span>
                   <span class="target-name">Các trường còn lại</span>
                 </div>
                 <div class="arrow-divider">▲ Quy định</div>
@@ -1192,11 +1218,15 @@
                   </th>
                   <th>
                     <span class="th-col-badge">Cột C</span> Người nhận*
-                    <span class="th-source-badge">Nơi nhận KDB</span>
+                    <span class="th-source-badge">Nơi nhận VT (Cột N)</span>
                   </th>
                   <th>
                     <span class="th-col-badge">Cột D</span> SĐT*
                     <span class="th-source-badge">0973468464</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột E</span> Địa chỉ*
+                    <span class="th-source-badge">Nơi nhận (Cột O)</span>
                   </th>
                   <th>
                     <span class="th-col-badge">Cột I</span> Mã Sản phẩm*
@@ -1229,6 +1259,10 @@
                   <th>
                     <span class="th-col-badge">Cột Q</span> Tên hàng hoá*
                     <span class="th-source-badge">Tên sản phẩm</span>
+                  </th>
+                  <th>
+                    <span class="th-col-badge">Cột S</span> Link Bill Sàn*
+                    <span class="th-source-badge">Mã yêu cầu (Cột B)</span>
                   </th>
                 </tr>
               </thead>

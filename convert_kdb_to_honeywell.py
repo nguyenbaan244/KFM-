@@ -3,22 +3,23 @@ Script chuyển đổi dữ liệu từ File Yêu Cầu Chuyển Hàng KDB sang 
 Quy tắc ánh xạ (Mapping):
   - Mã đơn gốc (Cột 1 / A)        <- [Nơi nhận (viết tắt)] + "_1" (ví dụ: B001 -> B001_1)
   - Gói dịch vụ (Cột 2 / B)        <- B2C3D
-  - Tên người nhận (Cột 3 / C)     <- [Nơi nhận] (ví dụ: KFM_HNI_YHO - CT3 Yên Hoà Park View)
+  - Tên người nhận (Cột 3 / C)     <- [Nơi nhận (viết tắt)] (Cột N) (ví dụ: B001)
   - Số điện thoại (Cột 4 / D)      <- 0973468464 (Text)
-  - Địa chỉ (Cột 5 / E)            <- Rỗng ("")
+  - Địa chỉ (Cột 5 / E)            <- [Nơi nhận] (Cột O) (ví dụ: KFM_HNI_YHO - CT3 Yên Hoà Park View)
   - Xã/Phường (Cột 6 / F)          <- Rỗng ("")
   - Quận/Huyện (Cột 7 / G)         <- Rỗng ("")
   - Tỉnh/Thành (Cột 8 / H)         <- Rỗng ("")
-  - Mã sản phẩm (Cột 9 / I)        <- [Barcode]
-  - Số lượng xuất (Cột 10 / J)     <- [Số lượng cần chuyển] (Nếu <= 0 thì bỏ qua)
+  - Mã sản phẩm (Cột 9 / I)        <- [Barcode] (Cột C)
+  - Số lượng xuất (Cột 10 / J)     <- [Số lượng cần chuyển] (Cột Q, nếu <= 0 thì bỏ qua)
   - Mã đối tác VC (Cột 11 / K)     <- GHN
   - Mã vận đơn (Cột 12 / L)        <- Rỗng ("")
   - Gói cước VC (Cột 13 / M)       <- 2
   - Tiền thu hộ (Cột 14 / N)       <- 0
   - Yêu cầu đơn hàng (Cột 15 / O)  <- 1
   - Hình thức thanh toán (Cột 16 / P) <- 3
-  - Tên hàng hoá (Cột 17 / Q)      <- [Tên sản phẩm]
-  - Các field còn lại (18..21)     <- Rỗng ("")
+  - Tên hàng hoá (Cột 17 / Q)      <- [Tên sản phẩm] (Cột D)
+  - Link Bill Sàn TMĐT (Cột 19 / S)<- [Mã yêu cầu] (Cột B)
+  - Các field còn lại (18, 20, 21) <- Rỗng ("")
 
 Sử dụng:
     python convert_kdb_to_honeywell.py [duong_dan_file_kdb] [duong_dan_file_xuat] [duong_dan_file_template]
@@ -36,6 +37,7 @@ except Exception:
 
 def find_input_columns(ws_in):
     cols = {
+        'req_code': 2,
         'barcode': 3,
         'product_name': 4,
         'dest_short': 14,
@@ -46,7 +48,9 @@ def find_input_columns(ws_in):
     # Header scan (row 1)
     for col in range(1, ws_in.max_column + 1):
         raw = str(ws_in.cell(1, col).value or '').strip().lower()
-        if raw in ['barcode', 'mã barcode', 'mã vạch', 'mã sản phẩm', 'mã hàng']:
+        if raw in ['mã yêu cầu', 'ma yeu cau', 'mã yc', 'ma yc', 'số yc', 'so yc', 'yêu cầu', 'yeu cau']:
+            cols['req_code'] = col
+        elif raw in ['barcode', 'mã barcode', 'mã vạch', 'mã sản phẩm', 'mã hàng']:
             cols['barcode'] = col
         elif raw in ['tên sản phẩm', 'ten san pham', 'tên hàng', 'tên hàng hoá', 'ten hang hoa']:
             cols['product_name'] = col
@@ -122,6 +126,7 @@ def convert_kdb_transfer_to_order(
     unique_destinations = set()
 
     for r in range(2, ws_in.max_row + 1):
+        req_code_val = ws_in.cell(r, col_map['req_code']).value
         barcode_val = ws_in.cell(r, col_map['barcode']).value
         product_name_val = ws_in.cell(r, col_map['product_name']).value
         dest_short_val = ws_in.cell(r, col_map['dest_short']).value
@@ -141,6 +146,7 @@ def convert_kdb_transfer_to_order(
             skipped_zero_count += 1
             continue
 
+        req_code_str = str(req_code_val).strip() if req_code_val is not None else ""
         barcode_str = str(barcode_val).strip() if barcode_val is not None else ""
         product_name_str = str(product_name_val).strip() if product_name_val is not None else ""
         dest_short_str = str(dest_short_val).strip() if dest_short_val is not None else ""
@@ -159,13 +165,13 @@ def convert_kdb_transfer_to_order(
         ws_out.cell(out_row, 1, order_code)
         # Cột 2 (B): Gói dịch vụ *
         ws_out.cell(out_row, 2, service_type)
-        # Cột 3 (C): Tên người nhận *
-        ws_out.cell(out_row, 3, dest_full_str)
+        # Cột 3 (C): Tên người nhận * = Nơi nhận (viết tắt) - Cột N
+        ws_out.cell(out_row, 3, dest_short_str)
         # Cột 4 (D): Số điện thoại * (Text '@')
         cell_d = ws_out.cell(out_row, 4, str(phone).strip())
         cell_d.number_format = '@'
-        # Cột 5 (E): Địa chỉ (rỗng)
-        ws_out.cell(out_row, 5, "")
+        # Cột 5 (E): Địa chỉ = Nơi nhận - Cột O
+        ws_out.cell(out_row, 5, dest_full_str)
         # Cột 6 (F): Xã/Phường (rỗng)
         ws_out.cell(out_row, 6, "")
         # Cột 7 (G): Quận/Huyện (rỗng)
@@ -191,9 +197,14 @@ def convert_kdb_transfer_to_order(
         ws_out.cell(out_row, 16, payment_type)
         # Cột 17 (Q): Tên hàng hoá *
         ws_out.cell(out_row, 17, product_name_str)
-        # Các cột còn lại (18..21): rỗng
-        for c_extra in range(18, 22):
-            ws_out.cell(out_row, c_extra, "")
+        # Cột 18 (R): Giá trị hàng hóa (rỗng)
+        ws_out.cell(out_row, 18, "")
+        # Cột 19 (S): Link Bill Sàn TMĐT = Mã yêu cầu (Cột B)
+        ws_out.cell(out_row, 19, req_code_str)
+        # Cột 20 (T): Mã Tuyến (rỗng)
+        ws_out.cell(out_row, 20, "")
+        # Cột 21 (U): Mã Cửa Hàng (rỗng)
+        ws_out.cell(out_row, 21, "")
 
         out_row += 1
 

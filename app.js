@@ -1817,6 +1817,7 @@
 
   function findTransferColumns(ws) {
     const cols = {
+      reqCode: -1,
       barcode: -1,
       productName: -1,
       destShort: -1,
@@ -1826,7 +1827,9 @@
     const headerRow = ws.getRow(1);
     headerRow.eachCell((cell, colNumber) => {
       const raw = String(cell.value || '').trim().toLowerCase();
-      if (raw === 'barcode' || raw === 'mã barcode' || raw === 'mã vạch' || raw === 'mã sản phẩm' || raw === 'mã hàng') {
+      if (raw === 'mã yêu cầu' || raw === 'ma yeu cau' || raw === 'mã yc' || raw === 'ma yc' || raw === 'số yc' || raw === 'so yc' || raw === 'yêu cầu') {
+        cols.reqCode = colNumber;
+      } else if (raw === 'barcode' || raw === 'mã barcode' || raw === 'mã vạch' || raw === 'mã sản phẩm' || raw === 'mã hàng') {
         cols.barcode = colNumber;
       } else if (raw === 'tên sản phẩm' || raw === 'tên hàng' || raw === 'tên hàng hoá' || raw === 'ten san pham') {
         cols.productName = colNumber;
@@ -1839,6 +1842,7 @@
       }
     });
 
+    if (cols.reqCode === -1) cols.reqCode = 2;
     if (cols.barcode === -1) cols.barcode = 3;
     if (cols.productName === -1) cols.productName = 4;
     if (cols.destShort === -1) cols.destShort = 14;
@@ -1875,14 +1879,21 @@
       tdService.textContent = item.serviceType;
       tr.appendChild(tdService);
 
-      const tdDest = document.createElement('td');
-      tdDest.textContent = item.destFull;
-      tr.appendChild(tdDest);
+      // Cột C: Tên người nhận = Nơi nhận viết tắt (cột N)
+      const tdReceiver = document.createElement('td');
+      tdReceiver.textContent = item.receiverName;
+      tdReceiver.style.fontWeight = '600';
+      tr.appendChild(tdReceiver);
 
       const tdPhone = document.createElement('td');
       tdPhone.textContent = item.phone;
       tdPhone.style.fontFamily = 'monospace';
       tr.appendChild(tdPhone);
+
+      // Cột E: Địa chỉ = Nơi nhận (cột O)
+      const tdAddr = document.createElement('td');
+      tdAddr.textContent = item.address;
+      tr.appendChild(tdAddr);
 
       const tdBarcode = document.createElement('td');
       tdBarcode.textContent = item.barcode;
@@ -1922,6 +1933,12 @@
       tdProd.textContent = item.productName;
       tr.appendChild(tdProd);
 
+      // Cột S: Link bill sàn TMĐT = Mã yêu cầu (cột B)
+      const tdLinkBill = document.createElement('td');
+      tdLinkBill.textContent = item.linkBill;
+      tdLinkBill.style.fontFamily = 'monospace';
+      tr.appendChild(tdLinkBill);
+
       fragment.appendChild(tr);
     });
 
@@ -1930,7 +1947,7 @@
     if (rows.length > 500) {
       const trMore = document.createElement('tr');
       const tdMore = document.createElement('td');
-      tdMore.colSpan = 13;
+      tdMore.colSpan = 15;
       tdMore.style.textAlign = 'center';
       tdMore.style.color = '#64748b';
       tdMore.style.fontStyle = 'italic';
@@ -1962,6 +1979,7 @@
 
     for (let r = 2; r <= ws.rowCount; r++) {
       const row = ws.getRow(r);
+      const reqCodeVal = row.getCell(colMap.reqCode).value;
       const barcodeVal = row.getCell(colMap.barcode).value;
       const productNameVal = row.getCell(colMap.productName).value;
       const destShortVal = row.getCell(colMap.destShort).value;
@@ -1981,6 +1999,7 @@
         continue;
       }
 
+      const reqCodeStr = reqCodeVal != null ? String(reqCodeVal).trim() : '';
       const barcodeStr = barcodeVal != null ? String(barcodeVal).trim() : '';
       const productNameStr = productNameVal != null ? String(productNameVal).trim() : '';
       const destShortStr = destShortVal != null ? String(destShortVal).trim() : '';
@@ -1996,9 +2015,10 @@
         orderCode: orderCode,
         destShort: destShortStr,
         serviceType: serviceType,
+        receiverName: destShortStr, // Tên người nhận = nơi nhận (viết tắt) - cột N
         destFull: destFullStr,
         phone: phone,
-        address: '',
+        address: destFullStr,       // Địa chỉ = nơi nhận - cột O
         ward: '',
         district: '',
         province: '',
@@ -2010,7 +2030,9 @@
         cod: 0,
         orderReq: 1,
         paymentType: 3,
-        productName: productNameStr
+        productName: productNameStr,
+        reqCode: reqCodeStr,
+        linkBill: reqCodeStr        // Cột S (Link bill sàn TMĐT) = Mã yêu cầu (cột B)
       });
     }
 
@@ -2201,13 +2223,15 @@
 
           targetRow.getCell(1).value = orderCode;
           targetRow.getCell(2).value = currentService;
-          targetRow.getCell(3).value = item.destFull || '';
+          // Cột 3 (C): Tên người nhận = nơi nhận (viết tắt) - Cột N
+          targetRow.getCell(3).value = item.destShort || '';
 
           const cellPhone = targetRow.getCell(4);
           cellPhone.value = currentPhone;
           cellPhone.numFmt = '@';
 
-          targetRow.getCell(5).value = '';
+          // Cột 5 (E): Địa chỉ = nơi nhận - Cột O
+          targetRow.getCell(5).value = item.destFull || '';
           targetRow.getCell(6).value = '';
           targetRow.getCell(7).value = '';
           targetRow.getCell(8).value = '';
@@ -2224,10 +2248,11 @@
           targetRow.getCell(15).value = 1;
           targetRow.getCell(16).value = 3;
           targetRow.getCell(17).value = item.productName || '';
-
-          for (let c = 18; c <= 21; c++) {
-            targetRow.getCell(c).value = '';
-          }
+          targetRow.getCell(18).value = '';
+          // Cột 19 (S): Link Bill Sàn TMĐT = Mã yêu cầu (Cột B)
+          targetRow.getCell(19).value = item.reqCode || '';
+          targetRow.getCell(20).value = '';
+          targetRow.getCell(21).value = '';
 
           targetRow.commit();
         });

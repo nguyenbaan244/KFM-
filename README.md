@@ -25,13 +25,15 @@
    - Quy tắc:
      - `Mã đơn gốc`: `[Nơi nhận (viết tắt)]` + `_1` (ví dụ `B001` &rarr; `B001_1`).
      - `Gói dịch vụ`: `B2C3D`.
-     - `Tên người nhận`: `[Nơi nhận]`.
+     - `Tên người nhận`: `[Nơi nhận (viết tắt)]` - Cột N (ví dụ `B001`).
      - `Số điện thoại`: `0973468464` (Text).
-     - `Mã sản phẩm`: `[Barcode]`.
-     - `Số lượng xuất`: `[Số lượng cần chuyển]`.
+     - `Địa chỉ`: `[Nơi nhận]` - Cột O (ví dụ `KFM_HNI_YHO - CT3 Yên Hoà Park View`).
+     - `Mã sản phẩm`: `[Barcode]` (Cột C).
+     - `Số lượng xuất`: `[Số lượng cần chuyển]` (Cột Q).
      - `Mã đối tác VC`: `GHN`, `Gói cước`: `2`, `COD`: `0`, `Yêu cầu`: `1`, `Thanh toán`: `3`.
-     - `Tên hàng hoá`: `[Tên sản phẩm]`.
-     - Các trường còn lại để trống.
+     - `Tên hàng hoá`: `[Tên sản phẩm]` (Cột D).
+     - `Cột S (Link bill sàn TMĐT)`: `[Mã yêu cầu]` - Cột B.
+     - Các trường còn lại (6, 7, 8, 12, 18, 20, 21) để trống.
    - Đi kèm script dòng lệnh: `convert_kdb_to_honeywell.py`.
 
 ## Quy Tắc Ánh Xạ Dữ Liệu PO (10 Cột)
