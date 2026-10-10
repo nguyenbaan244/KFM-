@@ -33,7 +33,8 @@
      - `Mã đối tác VC`: `GHN`, `Gói cước`: `2`, `COD`: `0`, `Yêu cầu`: `1`, `Thanh toán`: `3`.
      - `Tên hàng hoá`: `[Tên sản phẩm]` (Cột D).
      - `Cột S (Link bill sàn TMĐT)`: `[Mã yêu cầu]` - Cột B.
-     - Các trường còn lại (6, 7, 8, 12, 18, 20, 21) để trống.
+     - `Mã Cửa Hàng (Cột U)`: `[Nơi nhận (viết tắt)]` - Cột N (ví dụ `B001`).
+     - Các trường còn lại (6, 7, 8, 12, 18, 20) để trống.
    - Đi kèm script dòng lệnh: `convert_kdb_to_honeywell.py`.
 
 ## Quy Tắc Ánh Xạ Dữ Liệu PO (10 Cột)

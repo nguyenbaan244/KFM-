@@ -19,7 +19,8 @@ Quy tắc ánh xạ (Mapping):
   - Hình thức thanh toán (Cột 16 / P) <- 3
   - Tên hàng hoá (Cột 17 / Q)      <- [Tên sản phẩm] (Cột D)
   - Link Bill Sàn TMĐT (Cột 19 / S)<- [Mã yêu cầu] (Cột B)
-  - Các field còn lại (18, 20, 21) <- Rỗng ("")
+  - Mã Cửa Hàng (Cột 21 / U)       <- [Nơi nhận (viết tắt)] (Cột N) (ví dụ: B001)
+  - Các field còn lại (18, 20)     <- Rỗng ("")
 
 Sử dụng:
     python convert_kdb_to_honeywell.py [duong_dan_file_kdb] [duong_dan_file_xuat] [duong_dan_file_template]
@@ -207,8 +208,8 @@ def convert_kdb_transfer_to_order(
         ws_out.cell(out_row, 19, req_code_str)
         # Cột 20 (T): Mã Tuyến (rỗng)
         ws_out.cell(out_row, 20, "")
-        # Cột 21 (U): Mã Cửa Hàng (rỗng)
-        ws_out.cell(out_row, 21, "")
+        # Cột 21 (U): Mã Cửa Hàng = Nơi nhận (viết tắt) - Cột N
+        ws_out.cell(out_row, 21, dest_short_str)
 
         out_row += 1
 

@@ -1951,6 +1951,13 @@
       tdLinkBill.style.fontFamily = 'monospace';
       tr.appendChild(tdLinkBill);
 
+      // Cột U: Mã Cửa Hàng = Nơi nhận viết tắt (cột N)
+      const tdStoreCode = document.createElement('td');
+      tdStoreCode.textContent = item.storeCode || item.destShort || '';
+      tdStoreCode.style.fontWeight = '600';
+      tdStoreCode.style.color = '#0284c7';
+      tr.appendChild(tdStoreCode);
+
       fragment.appendChild(tr);
     });
 
@@ -1959,7 +1966,7 @@
     if (rows.length > 500) {
       const trMore = document.createElement('tr');
       const tdMore = document.createElement('td');
-      tdMore.colSpan = 15;
+      tdMore.colSpan = 16;
       tdMore.style.textAlign = 'center';
       tdMore.style.color = '#64748b';
       tdMore.style.fontStyle = 'italic';
@@ -2045,7 +2052,8 @@
         paymentType: 3,
         productName: productNameStr,
         reqCode: reqCodeStr,
-        linkBill: reqCodeStr        // Cột S (Link bill sàn TMĐT) = Mã yêu cầu (cột B)
+        linkBill: reqCodeStr,       // Cột S (Link bill sàn TMĐT) = Mã yêu cầu (cột B)
+        storeCode: destShortStr     // Cột U (Mã Cửa Hàng) = Nơi nhận viết tắt (cột N)
       });
     }
 
@@ -2267,7 +2275,8 @@
           // Cột 19 (S): Link Bill Sàn TMĐT = Mã yêu cầu (Cột B)
           targetRow.getCell(19).value = item.reqCode || '';
           targetRow.getCell(20).value = '';
-          targetRow.getCell(21).value = '';
+          // Cột 21 (U): Mã Cửa Hàng = Nơi nhận viết tắt (Cột N)
+          targetRow.getCell(21).value = item.destShort || item.storeCode || '';
 
           targetRow.commit();
         });
