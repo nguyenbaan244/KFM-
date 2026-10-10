@@ -9,21 +9,25 @@
   const tabBtnInventory = document.getElementById('tabBtnInventory');
   const tabBtnLocHW = document.getElementById('tabBtnLocHW');
   const tabBtnOrderKDB = document.getElementById('tabBtnOrderKDB');
+  const tabBtnPTKDB = document.getElementById('tabBtnPTKDB');
   const tabConvert = document.getElementById('tabConvert');
   const tabInventory = document.getElementById('tabInventory');
   const tabLocHW = document.getElementById('tabLocHW');
   const tabOrderKDB = document.getElementById('tabOrderKDB');
+  const tabPTKDB = document.getElementById('tabPTKDB');
 
   function switchTab(targetTab) {
     tabBtnConvert.classList.remove('active');
     tabBtnInventory.classList.remove('active');
     if (tabBtnLocHW) tabBtnLocHW.classList.remove('active');
     if (tabBtnOrderKDB) tabBtnOrderKDB.classList.remove('active');
+    if (tabBtnPTKDB) tabBtnPTKDB.classList.remove('active');
 
     tabConvert.style.display = 'none';
     tabInventory.style.display = 'none';
     if (tabLocHW) tabLocHW.style.display = 'none';
     if (tabOrderKDB) tabOrderKDB.style.display = 'none';
+    if (tabPTKDB) tabPTKDB.style.display = 'none';
 
     if (targetTab === 'tabConvert') {
       tabBtnConvert.classList.add('active');
@@ -37,6 +41,9 @@
     } else if (targetTab === 'tabOrderKDB') {
       if (tabBtnOrderKDB) tabBtnOrderKDB.classList.add('active');
       if (tabOrderKDB) tabOrderKDB.style.display = 'block';
+    } else if (targetTab === 'tabPTKDB') {
+      if (tabBtnPTKDB) tabBtnPTKDB.classList.add('active');
+      if (tabPTKDB) tabPTKDB.style.display = 'block';
     }
   }
 
@@ -47,6 +54,9 @@
   }
   if (tabBtnOrderKDB) {
     tabBtnOrderKDB.addEventListener('click', () => switchTab('tabOrderKDB'));
+  }
+  if (tabBtnPTKDB) {
+    tabBtnPTKDB.addEventListener('click', () => switchTab('tabPTKDB'));
   }
 
   // ============================================================
@@ -2317,6 +2327,445 @@
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
           </svg>
           Xuất File Tạo Order Honeywell (.xlsx)
+        `;
+      }
+    });
+  }
+
+  // ============================================================
+  // TAB 5: CONVERT HONEYWELL -> KDB (PHIẾU CHUYỂN)
+  // ============================================================
+  const ptDropZone = document.getElementById('ptDropZone');
+  const ptFileInput = document.getElementById('ptFileInput');
+  const btnSelectPtFile = document.getElementById('btnSelectPtFile');
+  const btnLoadDemoPt = document.getElementById('btnLoadDemoPt');
+
+  const ptInputFromLoc = document.getElementById('ptInputFromLoc');
+  const ptInputFilename = document.getElementById('ptInputFilename');
+
+  const ptStatsSection = document.getElementById('ptStatsSection');
+  const statPtTotalRows = document.getElementById('statPtTotalRows');
+  const statPtTotalQty = document.getElementById('statPtTotalQty');
+  const statPtTotalStores = document.getElementById('statPtTotalStores');
+  const statPtTotalPacks = document.getElementById('statPtTotalPacks');
+
+  const ptTableSection = document.getElementById('ptTableSection');
+  const ptTableToolbar = document.getElementById('ptTableToolbar');
+  const ptSearchInput = document.getElementById('ptSearchInput');
+  const ptTableRowCount = document.getElementById('ptTableRowCount');
+  const ptTableBody = document.getElementById('ptTableBody');
+  const btnDownloadPt = document.getElementById('btnDownloadPt');
+  const btnResetPt = document.getElementById('btnResetPt');
+  const ptPreviewSubtitle = document.getElementById('ptPreviewSubtitle');
+
+  let convertedPtRows = [];
+  let ptUniqueStores = new Set();
+  let ptUniquePacks = new Set();
+  let ptTotalQty = 0;
+  let ptSourceFileName = '';
+
+  function findOutboundColumns(ws) {
+    const cols = {
+      mcode: 12,
+      qtyShipped: 18,
+      packId: 22,
+      storeSub: 31
+    };
+
+    const headerRow = ws.getRow(1);
+    headerRow.eachCell((cell, colNumber) => {
+      const raw = String(cell.value || '').trim().toLowerCase();
+      if (raw === 'mcode' || raw === 'm-code' || raw === 'm_code' || raw === 'barcode' || raw === 'mã mcode') {
+        cols.mcode = colNumber;
+      } else if (raw === 'qty shipped' || raw === 'qty_shipped' || raw === 'qtyshipped' || raw === 'số lượng chuyển' || raw === 'sl xuất' || raw === 'sl chuyển') {
+        cols.qtyShipped = colNumber;
+      } else if (raw === 'pack id' || raw === 'pack_id' || raw === 'packid' || raw === 'mã thùng') {
+        // Cột V (thường là 22) chứa mã thùng SO...#001
+        if (colNumber >= 20 || cols.packId === 22) {
+          cols.packId = colNumber;
+        }
+      } else if (raw === 'store sub code' || raw === 'store_sub_code' || raw === 'storesubcode' || raw === 'sub code' || raw === 'nơi nhận') {
+        cols.storeSub = colNumber;
+      }
+    });
+
+    return cols;
+  }
+
+  function renderPtTable(rows) {
+    if (!ptTableBody) return;
+    ptTableBody.innerHTML = '';
+
+    if (rows.length === 0) {
+      const tr = document.createElement('tr');
+      const td = document.createElement('td');
+      td.colSpan = 7;
+      td.style.textAlign = 'center';
+      td.style.color = '#94a3b8';
+      td.style.padding = '2rem';
+      td.textContent = 'Không có dữ liệu phù hợp với tìm kiếm.';
+      tr.appendChild(td);
+      ptTableBody.appendChild(tr);
+      return;
+    }
+
+    const fragment = document.createDocumentFragment();
+    const displayLimit = Math.min(rows.length, 500);
+
+    for (let i = 0; i < displayLimit; i++) {
+      const item = rows[i];
+      const tr = document.createElement('tr');
+
+      const tdStt = document.createElement('td');
+      tdStt.textContent = item.stt;
+      tdStt.style.textAlign = 'center';
+      tdStt.style.color = '#94a3b8';
+      tr.appendChild(tdStt);
+
+      // Cột A: Nơi chuyển
+      const tdFrom = document.createElement('td');
+      tdFrom.textContent = item.fromLoc;
+      tdFrom.style.fontWeight = '600';
+      tdFrom.style.color = '#475569';
+      tr.appendChild(tdFrom);
+
+      // Cột B: Nơi nhận
+      const tdTo = document.createElement('td');
+      tdTo.textContent = item.storeSub || '-';
+      tdTo.style.fontWeight = '600';
+      tdTo.style.color = item.storeSub ? '#2563eb' : '#94a3b8';
+      tr.appendChild(tdTo);
+
+      // Cột C: Barcode
+      const tdBarcode = document.createElement('td');
+      tdBarcode.textContent = item.mcode || '-';
+      tdBarcode.style.fontFamily = 'monospace';
+      tr.appendChild(tdBarcode);
+
+      // Cột D: SL chuyển
+      const tdQty = document.createElement('td');
+      tdQty.textContent = formatNumber(item.qty);
+      tdQty.style.textAlign = 'right';
+      tdQty.style.fontWeight = '600';
+      tdQty.style.color = '#16a34a';
+      tr.appendChild(tdQty);
+
+      // Cột E: Mã thùng
+      const tdPack = document.createElement('td');
+      tdPack.textContent = item.packId || '-';
+      tdPack.style.fontFamily = 'monospace';
+      tdPack.style.color = '#7c3aed';
+      tr.appendChild(tdPack);
+
+      // Cột F: Ghi chú barcode
+      const tdNote = document.createElement('td');
+      tdNote.textContent = '';
+      tr.appendChild(tdNote);
+
+      fragment.appendChild(tr);
+    }
+
+    ptTableBody.appendChild(fragment);
+
+    if (rows.length > 500) {
+      const trMore = document.createElement('tr');
+      const tdMore = document.createElement('td');
+      tdMore.colSpan = 7;
+      tdMore.style.textAlign = 'center';
+      tdMore.style.color = '#64748b';
+      tdMore.style.fontStyle = 'italic';
+      tdMore.style.padding = '1rem';
+      tdMore.textContent = `... và ${formatNumber(rows.length - 500)} dòng khác (toàn bộ dữ liệu sẽ được xuất ra file Excel)`;
+      trMore.appendChild(tdMore);
+      ptTableBody.appendChild(trMore);
+    }
+  }
+
+  async function parseOutboundData(arrayBuffer, fileName) {
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(arrayBuffer);
+    const ws = wb.worksheets[0];
+    if (!ws) throw new Error('File Excel không có sheet nào hợp lệ.');
+
+    const colMap = findOutboundColumns(ws);
+
+    convertedPtRows = [];
+    ptUniqueStores = new Set();
+    ptUniquePacks = new Set();
+    ptTotalQty = 0;
+    ptSourceFileName = fileName || 'Outbound_Honeywell.xlsx';
+    let skippedZero = 0;
+
+    const fromLoc = (ptInputFromLoc ? ptInputFromLoc.value.trim() : '') || 'FGB10101';
+
+    for (let r = 2; r <= ws.rowCount; r++) {
+      const row = ws.getRow(r);
+      const mcodeVal = row.getCell(colMap.mcode).value;
+      const qtyVal = row.getCell(colMap.qtyShipped).value;
+      const packVal = row.getCell(colMap.packId).value;
+      const storeSubVal = row.getCell(colMap.storeSub).value;
+
+      if (mcodeVal == null && qtyVal == null && packVal == null && storeSubVal == null) {
+        continue;
+      }
+
+      let qty = 0;
+      if (qtyVal != null) {
+        const n = Number(qtyVal);
+        if (!isNaN(n)) qty = n;
+      }
+
+      if (qty <= 0) {
+        skippedZero++;
+        continue;
+      }
+
+      const mcodeStr = mcodeVal != null ? String(mcodeVal).trim() : '';
+      const packStr = packVal != null ? String(packVal).trim() : '';
+      const storeSubStr = storeSubVal != null ? String(storeSubVal).trim() : '';
+
+      if (storeSubStr) ptUniqueStores.add(storeSubStr);
+      if (packStr) ptUniquePacks.add(packStr);
+      ptTotalQty += qty;
+
+      convertedPtRows.push({
+        stt: convertedPtRows.length + 1,
+        fromLoc: fromLoc,
+        storeSub: storeSubStr,
+        mcode: mcodeStr,
+        qty: qty,
+        packId: packStr,
+        note: ''
+      });
+    }
+
+    if (convertedPtRows.length === 0) {
+      throw new Error('Không tìm thấy dòng dữ liệu hợp lệ (SL xuất > 0) trong file Outbound Honeywell.');
+    }
+
+    if (statPtTotalRows) statPtTotalRows.textContent = formatNumber(convertedPtRows.length);
+    if (statPtTotalQty) statPtTotalQty.textContent = formatNumber(ptTotalQty);
+    if (statPtTotalStores) statPtTotalStores.textContent = formatNumber(ptUniqueStores.size);
+    if (statPtTotalPacks) statPtTotalPacks.textContent = formatNumber(ptUniquePacks.size);
+
+    if (ptStatsSection) ptStatsSection.style.display = 'grid';
+    if (ptTableSection) ptTableSection.style.display = 'block';
+    if (ptTableToolbar) ptTableToolbar.style.display = 'flex';
+    if (btnDownloadPt) btnDownloadPt.disabled = false;
+
+    if (ptPreviewSubtitle) {
+      ptPreviewSubtitle.textContent = `Nguồn: ${ptSourceFileName} • ${formatNumber(convertedPtRows.length)} dòng • ${formatNumber(ptTotalQty)} sản phẩm • ${ptUniqueStores.size} nơi nhận • ${ptUniquePacks.size} thùng`;
+    }
+
+    if (ptTableRowCount) {
+      ptTableRowCount.textContent = `Hiển thị ${formatNumber(convertedPtRows.length)} dòng`;
+    }
+
+    renderPtTable(convertedPtRows);
+    showToast(`Đã chuyển đổi thành công ${formatNumber(convertedPtRows.length)} dòng Phiếu Chuyển KDB!`, 'success');
+  }
+
+  async function handlePtFile(file) {
+    if (!file) return;
+    try {
+      showToast('Đang đọc và xử lý file Outbound Honeywell...', 'info');
+      const buffer = await file.arrayBuffer();
+      await parseOutboundData(buffer, file.name);
+    } catch (err) {
+      console.error('Lỗi đọc file Outbound:', err);
+      showToast('Lỗi: ' + err.message, 'error');
+    }
+  }
+
+  if (ptFileInput) {
+    ptFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        handlePtFile(e.target.files[0]);
+      }
+    });
+  }
+
+  if (btnSelectPtFile) {
+    btnSelectPtFile.addEventListener('click', () => {
+      if (ptFileInput) ptFileInput.click();
+    });
+  }
+
+  if (ptDropZone) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      ptDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ptDropZone.classList.add('dragover');
+      }, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      ptDropZone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        ptDropZone.classList.remove('dragover');
+      }, false);
+    });
+
+    ptDropZone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files[0]) {
+        handlePtFile(dt.files[0]);
+      }
+    });
+  }
+
+  if (btnLoadDemoPt) {
+    btnLoadDemoPt.addEventListener('click', async () => {
+      try {
+        if (typeof SAMPLE_OUTBOUND_HW_BASE64 === 'undefined' || !SAMPLE_OUTBOUND_HW_BASE64) {
+          throw new Error('Dữ liệu mẫu Outbound Honeywell chưa được tải.');
+        }
+        showToast('Đang nạp file dữ liệu mẫu Outbound Honeywell...', 'info');
+        const buffer = base64ToArrayBuffer(SAMPLE_OUTBOUND_HW_BASE64);
+        await parseOutboundData(buffer, 'Outbound_Honeywell_Mau.xlsx');
+      } catch (err) {
+        console.error('Demo error:', err);
+        showToast('Lỗi khi nạp dữ liệu mẫu: ' + err.message, 'error');
+      }
+    });
+  }
+
+  if (ptSearchInput) {
+    ptSearchInput.addEventListener('input', (e) => {
+      const term = e.target.value.trim().toLowerCase();
+      if (!term) {
+        renderPtTable(convertedPtRows);
+        if (ptTableRowCount) ptTableRowCount.textContent = `Hiển thị ${formatNumber(convertedPtRows.length)} dòng`;
+        return;
+      }
+      const filtered = convertedPtRows.filter(r =>
+        (r.mcode && r.mcode.toLowerCase().includes(term)) ||
+        (r.packId && r.packId.toLowerCase().includes(term)) ||
+        (r.storeSub && r.storeSub.toLowerCase().includes(term)) ||
+        (r.fromLoc && r.fromLoc.toLowerCase().includes(term))
+      );
+      renderPtTable(filtered);
+      if (ptTableRowCount) {
+        ptTableRowCount.textContent = `Tìm thấy ${formatNumber(filtered.length)} / ${formatNumber(convertedPtRows.length)} dòng`;
+      }
+    });
+  }
+
+  if (btnResetPt) {
+    btnResetPt.addEventListener('click', () => {
+      convertedPtRows = [];
+      ptUniqueStores.clear();
+      ptUniquePacks.clear();
+      ptTotalQty = 0;
+      if (ptFileInput) ptFileInput.value = '';
+      if (ptSearchInput) ptSearchInput.value = '';
+      if (ptStatsSection) ptStatsSection.style.display = 'none';
+      if (ptTableSection) ptTableSection.style.display = 'none';
+      if (ptTableToolbar) ptTableToolbar.style.display = 'none';
+      if (btnDownloadPt) btnDownloadPt.disabled = true;
+      if (ptTableBody) ptTableBody.innerHTML = '';
+      showToast('Đã đặt lại dữ liệu Phiếu Chuyển.', 'info');
+    });
+  }
+
+  if (btnDownloadPt) {
+    btnDownloadPt.addEventListener('click', async () => {
+      if (convertedPtRows.length === 0) {
+        showToast('Không có dữ liệu để xuất!', 'error');
+        return;
+      }
+
+      try {
+        btnDownloadPt.disabled = true;
+        btnDownloadPt.textContent = 'Đang tạo file Excel...';
+
+        if (typeof TEMPLATE_PT_KDB_BASE64 === 'undefined' || !TEMPLATE_PT_KDB_BASE64) {
+          throw new Error('Template Phiếu Chuyển KDB không tồn tại.');
+        }
+
+        const templateBuffer = base64ToArrayBuffer(TEMPLATE_PT_KDB_BASE64);
+        const outWb = new ExcelJS.Workbook();
+        await outWb.xlsx.load(templateBuffer);
+
+        let outWs = outWb.worksheets[0];
+        if (!outWs) throw new Error('Không tìm thấy sheet hợp lệ trong file template PT KDB.');
+
+        // Xóa dòng mẫu từ dòng 2 trở đi
+        while (outWs.rowCount >= 2) {
+          outWs.spliceRows(2, 1);
+        }
+
+        // Định dạng Text (@) cho Barcode (cột 3) và Mã thùng (cột 5)
+        outWs.getColumn(3).numFmt = '@';
+        outWs.getColumn(5).numFmt = '@';
+
+        const currentFromLoc = (ptInputFromLoc ? ptInputFromLoc.value.trim() : '') || 'FGB10101';
+
+        convertedPtRows.forEach((item, index) => {
+          const rowNumber = 2 + index;
+          const targetRow = outWs.getRow(rowNumber);
+
+          // Cột 1 (A): Nơi chuyển
+          targetRow.getCell(1).value = currentFromLoc;
+          // Cột 2 (B): Nơi nhận = Store Sub Code
+          targetRow.getCell(2).value = item.storeSub || '';
+
+          // Cột 3 (C): Barcode = MCode (Text '@')
+          const cellBarcode = targetRow.getCell(3);
+          cellBarcode.value = item.mcode || '';
+          cellBarcode.numFmt = '@';
+
+          // Cột 4 (D): Số lượng chuyển
+          targetRow.getCell(4).value = Number(item.qty) || 0;
+
+          // Cột 5 (E): Mã thùng = Pack ID (Text '@')
+          const cellPack = targetRow.getCell(5);
+          cellPack.value = item.packId || '';
+          cellPack.numFmt = '@';
+
+          // Cột 6 (F): Ghi chú barcode (rỗng)
+          targetRow.getCell(6).value = '';
+
+          targetRow.commit();
+        });
+
+        const outBuffer = await outWb.xlsx.writeBuffer();
+        const blob = new Blob([outBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+
+        let filename = ptInputFilename ? ptInputFilename.value.trim() : '';
+        if (!filename) {
+          const now = new Date();
+          const dateStamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`;
+          filename = `phieu_chuyen_KDB_${dateStamp}.xlsx`;
+        }
+        if (!filename.toLowerCase().endsWith('.xlsx')) {
+          filename += '.xlsx';
+        }
+
+        const downloadUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+
+        showToast(`Đã xuất file Phiếu Chuyển thành công: ${filename}`, 'success');
+      } catch (err) {
+        console.error('PT Export error:', err);
+        showToast('Lỗi khi xuất file: ' + err.message, 'error');
+      } finally {
+        btnDownloadPt.disabled = false;
+        btnDownloadPt.innerHTML = `
+          <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.5V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          Xuất File Phiếu Chuyển KDB (.xlsx)
         `;
       }
     });

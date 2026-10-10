@@ -37,6 +37,17 @@
      - Các trường còn lại (6, 7, 8, 12, 18, 20) để trống.
    - Đi kèm script dòng lệnh: `convert_kdb_to_honeywell.py`.
 
+5. **Tab 5 - Convert template Honeywell -> KDB (Tạo Phiếu Chuyển):**
+   - Chuyển đổi dữ liệu Outbound Honeywell sang file Excel Phiếu Chuyển KDB (Template PT KDB 6 cột chuẩn).
+   - Quy tắc:
+     - `Tên viết tắt nơi chuyển`: Cố định `FGB10101`.
+     - `Tên viết tắt nơi nhận`: `Store Sub Code` (Cột AE file Outbound Honeywell).
+     - `Barcode`: `MCode` (Cột L file Outbound Honeywell, kiểu Text).
+     - `Số lượng chuyển`: `QTY Shipped` (Cột R file Outbound Honeywell, bỏ dòng nếu &le; 0).
+     - `Mã thùng`: `Pack ID` (Cột V file Outbound Honeywell, dạng `SO...#001`).
+     - `Ghi chú barcode`: Để trống.
+   - Đi kèm script dòng lệnh: `convert_honeywell_to_kdb.py`.
+
 ## Quy Tắc Ánh Xạ Dữ Liệu PO (10 Cột)
 | Cột Nhập Hàng | Tên Trường | Cột Nguồn PO | Ghi Chú |
 | :--- | :--- | :--- | :--- |
@@ -63,5 +74,9 @@
 3. **Chạy script Python tạo Order Honeywell:**
    ```bash
    python convert_kdb_to_honeywell.py [duong_dan_file_kdb] [duong_dan_file_xuat]
+   ```
+4. **Chạy script Python tạo Phiếu Chuyển KDB từ Honeywell:**
+   ```bash
+   python convert_honeywell_to_kdb.py [duong_dan_file_outbound_hw] [duong_dan_file_xuat]
    ```
 
